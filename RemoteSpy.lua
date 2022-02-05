@@ -41,6 +41,15 @@ if not getthreadcontext or not setthreadcontext then
     return;
 end
 
+if rconsolename then
+    rconsolename("RemoteSpy")
+end
+
+local function Stringify(String)
+    local Stringified = String:gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("%c", function(Char) return "\\"..(utf8.codepoint(Char) or 0) end)
+    return Stringified
+end
+
 local function Ignore(self, ...)
     if getgenv().Ignore then
         return getgenv().Ignore(self, ...)
@@ -54,39 +63,60 @@ local function Timestamp()
     return ("%s/%s/%s %s:%s:%s:%s"):format(Time:FormatUniversalTime("D", "en-us"), Time:FormatUniversalTime("M", "en-us"), Time:FormatUniversalTime("YYYY", "en-us"), Time:FormatUniversalTime("H", "en-us"), Time:FormatUniversalTime("m", "en-us"), Time:FormatUniversalTime("s", "en-us"), Time:FormatUniversalTime("SSS", "en-us"))--// why is there no en-uk
 end
 
-for i, v in next, Methods do
-    local _Instance = Instance.new(i)
-    local Original; Original = hookfunction(_Instance[v], newcclosure(function(self, ...)
-        local Response = {Original(self, ...)}
+local function Log(...)
+    local Arguments = {...}
+
+    for i, v in next, Arguments do
+        if type(v) == "string" then
+            Arguments[i] = Stringify(v)
+        elseif type(v) == "table" then
+            Arguments[i] = PrintTable(v)
+        end
+    end
+
+    if Arguments[7] then
+        return rconsolewarn(("\nWhat: %s\nMethod: %s\nTo Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s"):format(Arguments[1], Arguments[2], Arguments[3], Arguments[4], Arguments[5], Arguments[7], Arguments[6]))
+    end
+
+    rconsolewarn(("\nWhat: %s\nMethod: %s\nTo Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s"):format(Arguments[1], Arguments[2], Arguments[3], Arguments[4], Arguments[5], Arguments[6]))
+end
+
+local pcall, unpack, assert = pcall, unpack, assert
+
+for Name, Method in next, Methods do
+    local Original; Original = hookfunction(Instance.new(Name)[Method], function(...)
+        local Arguments = {...}
+        local self = ...
+        local Response = Original(...)
         local ClassName = self.ClassName
         local Info = getinfo(3)
-        local Arguments = {...}
-        
-        if RemoteSpyEnabled and Enabled[ClassName] and not Ignore(self, ...) then
+
+        if RemoteSpyEnabled and Enabled[ClassName] and not Ignore(...) then
             if ClassName:match("Function") then
-                rconsolewarn(("\nWhat: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s"):format(GetFullName(self), v, Info.short_src or "NULL", Timestamp(), #Arguments > 0 and PrintTable(Arguments) or "None", Response and #Response > 0 and PrintTable(Response) or "None", PrintTable(Info)))
+                Log(GetFullName(self), Method, Info.short_src, Timestamp(), Arguments, Info, Response)
             else
-                rconsolewarn(("\nWhat: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s"):format(GetFullName(self), v, Info.short_src or "NULL", Timestamp(), #Arguments > 0 and PrintTable(Arguments) or "None", PrintTable(Info)))
+                Log(GetFullName(self), Method, Info.short_src, Timestamp(), Arguments, Info)
             end
         end
     
         return unpack(Response)
-    end))
+    end)
 end
 
-local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local Response = {OldNamecall(self, ...)}
+local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...)
+    local self = ...
+    local Response = {OldNamecall(...)}
     local ClassName = self.ClassName
     local Method = getnamecallmethod() or ""
+    local Arguments = {...}
 
-    if Methods[ClassName] and Enabled[ClassName] and Methods[ClassName]:lower() == Method:lower() and RemoteSpyEnabled and not Ignore(self, ...) then
-        local Arguments = {...}
+    if Methods[ClassName] and Enabled[ClassName] and Methods[ClassName]:lower() == Method:lower() and RemoteSpyEnabled and not Ignore(...) then
         local Info = getinfo(3)
 
         if ClassName:match("Function") then
-            rconsolewarn(("\nWhat: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s"):format(GetFullName(self), Method, Info.short_src or "NULL", Timestamp(), #Arguments > 0 and PrintTable(Arguments) or "None", Response and #Response > 0 and PrintTable(Response) or "None", PrintTable(Info)))
+            Log(GetFullName(self), Method, Info.short_src, Timestamp(), Arguments, Info, Response)
         else
-            rconsolewarn(("\nWhat: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s"):format(GetFullName(self), Method, Info.short_src or "NULL", Timestamp(), #Arguments > 0 and PrintTable(Arguments) or "None", PrintTable(Info)))
+            Log(GetFullName(self), Method, Info.short_src, Timestamp(), Arguments, Info, Response)
         end
     end
 
@@ -100,20 +130,25 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(sel
         local Method = Arguments[1]:gsub("On", "")
         local Function = Arguments[2]
         local Info = getinfo(Function)
-        
-        local function Honeypot(...)
-            local InvokedArguments = {...}
 
-            if RemoteSpyEnabled and Enabled[ClassName] then
-                rconsolewarn(("\nWhat: %s\nMethod: %s\nTo Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s"):format(GetFullName(self), Method, Info.short_src or "NULL", Timestamp(), #InvokedArguments > 0 and PrintTable(InvokedArguments) or "None", PrintTable(Info)))
+        if not (#getupvalues(Function) == 0 and #getconstants(Function) == 1 and typeof(getconstant(Function, 1)) == "userdata" and islclosure(Function)) then
+            local Old;
+            
+            local function DoOtherFunction(...)
+                local InvokedArguments = {...}
+                local Response = {Old(...)}
+
+                if RemoteSpyEnabled and Enabled[ClassName] then
+                    Log(GetFullName(self), Method, Info.short_src, Timestamp(), InvokedArguments, Info, Response)
+                end
+
+                return unpack(Response)
             end
-
-            setthreadcontext(getthreadcontext(Function))
-
-            task.spawn(Function, ...)
+            
+            Old = hookfunction(Function, function(...)
+                return DoOtherFunction(...)
+            end)
         end
-
-        return OldNewIndex(self, Arguments[1], Honeypot)
     end
     
     return OldNewIndex(self, ...)
