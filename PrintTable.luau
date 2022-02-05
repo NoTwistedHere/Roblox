@@ -24,7 +24,6 @@ for i, v in next, Required do
         end
 
         game:GetService("Players").LocalPlayer:Kick("Unsupported exploit")
-
         return;
     end
 end
@@ -99,12 +98,9 @@ end
 
 getgenv().PrintTable = newcclosure(function(Table)
     local Type = typeof(Table)
-
-    if Type ~= "table" and Type ~= "userdata" then
-        return ("PrintTable: Invalid Argument #1 (got %s)"):format(tostring(Type))
-    end
+    assert((Type == "table" or Type == "userdata"), "PrintTable: Invalid Argument #1 (table or userdata expected)")
 
     local Success, Response = pcall(_PrintTable, Table)
 
-    return (Success and Response) or ("PrintTable Error: \"%s\""):format(Response)
+    return (Success and Response) or ("PrintTable: \"%s\""):format(Response)
 end)
