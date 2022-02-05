@@ -28,7 +28,7 @@ for i, v in next, Required do
     end
 end
 
-local CountTable = function(Table)
+local function CountTable(Table)
     local Count = 0
 
     for _, _ in next, Table do
@@ -38,8 +38,8 @@ local CountTable = function(Table)
     return Count
 end
 
-local Stringify = function(String)
-    local Stringified = String:gsub("\"", "\\\"")
+local function Stringify(String)
+    local Stringified = String:gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("%c", function(Char) return "\\"..(utf8.codepoint(Char) or 0) end)
     return Stringified
 end
 
