@@ -46,8 +46,20 @@ if rconsolename then
 end
 
 local function Stringify(String)
-    local Stringified = String:gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("%c", function(Char) return "\\"..(utf8.codepoint(Char) or 0) end)
+    if type(String) ~= "string" then
+        return;
+    end
+
+    local Stringified = String:gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("[%c%s]", function(Char) return "\\"..(utf8.codepoint(Char) or 0) end)
     return Stringified
+end
+
+local function TrueString(String)
+    if type(String) ~= "string" then
+        return false
+    end
+
+    return (string.split(String, "\0"))[1]
 end
 
 local function Ignore(self, ...)
@@ -61,6 +73,20 @@ end
 local function Timestamp()
     local Time = DateTime.now()
     return ("%s/%s/%s %s:%s:%s:%s"):format(Time:FormatUniversalTime("D", "en-us"), Time:FormatUniversalTime("M", "en-us"), Time:FormatUniversalTime("YYYY", "en-us"), Time:FormatUniversalTime("H", "en-us"), Time:FormatUniversalTime("m", "en-us"), Time:FormatUniversalTime("s", "en-us"), Time:FormatUniversalTime("SSS", "en-us"))--// why is there no en-uk
+end
+
+local function CheckDep(String1, Comparison)
+    if not (type(String1) == "string" and type(Comparison) == "string") then
+        return false
+    end
+
+    local Dep = Comparison:sub(1, 1):lower()..Comparison:sub(2, 9e5)
+
+    if String1 == Comparison or String1 == Dep then
+        return true
+    end
+
+    return false
 end
 
 local function Log(...)
@@ -110,7 +136,7 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
     local Method = getnamecallmethod() or ""
     local Arguments = {...}
 
-    if Methods[ClassName] and Enabled[ClassName] and Methods[ClassName]:lower() == Method:lower() and RemoteSpyEnabled and not Ignore(...) then
+    if Methods[ClassName] and Enabled[ClassName] and RemoteSpyEnabled and CheckDep(Method, Methods[ClassName]) and not Ignore(...) then
         local Info = getinfo(3)
 
         if ClassName:match("Function") then
@@ -125,13 +151,14 @@ end)
 
 local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(self, ...)
     local Arguments = {...}
-    if self:IsA("RemoteFunction") and Arguments[1] == "OnClientInvoke" and type(Arguments[2]) == "function" then
+
+    if self:IsA("RemoteFunction") and TrueString(Arguments[1]) == "OnClientInvoke" and type(Arguments[2]) == "function" then
         local ClassName = self.ClassName
-        local Method = Arguments[1]:gsub("On", "")
+        local Name = Stringify(GetFullName(self))
         local Function = Arguments[2]
         local Info = getinfo(Function)
 
-        if not (#getupvalues(Function) == 0 and #getconstants(Function) == 1 and typeof(getconstant(Function, 1)) == "userdata" and islclosure(Function)) then
+        if not (islclosure(Function) and #getupvalues(Function) == 0 and #getconstants(Function) == 1 and typeof(getconstant(Function, 1)) == "userdata") then
             local Old;
             
             local function DoOtherFunction(...)
@@ -139,7 +166,7 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(sel
                 local Response = {Old(...)}
 
                 if RemoteSpyEnabled and Enabled[ClassName] then
-                    Log(GetFullName(self), Method, Info.short_src, Timestamp(), InvokedArguments, Info, Response)
+                    Log(Name, "ClientInvoke", Stringify(Info.short_src), Timestamp(), InvokedArguments, Info, Response)
                 end
 
                 return unpack(Response)
