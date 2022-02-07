@@ -39,7 +39,8 @@ local function CountTable(Table)
 end
 
 local function Stringify(String)
-    local Stringified = String:gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("%c", function(Char) return "\\"..(utf8.codepoint(Char) or 0) end)
+    local Stringified = String:gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("[%c%s]", function(Char) return "\\"..(utf8.codepoint(Char) or 0) end)
+
     return Stringified
 end
 
@@ -66,12 +67,12 @@ local ParseObject = function(Object)
     elseif ObjectType == 2 then
         return ("\"%s\""):format(Stringify(Object))
     elseif ObjectType == 3 then
-        return Object:GetFullName()
+        return Stringify(Object:GetFullName())
     elseif ObjectType == 4 then
         return Tostring(Object)..(getrawmetatable(Object) ~= nil and " [Metatable]" or "")
     elseif ObjectType == 5 then
         local Info = getinfo(Object)
-        return ("%s --// source: %s, what: %s, name: \"%s\" (currentline: %s, numparams: %s, nups: %s, is_vararg: %s)"):format(tostring(Object), Info.source, Info.what, Info.name, Info.currentline, Info.numparams, Info.nups, Info.is_vararg)
+        return ("%s --// source: %s, what: %s, name: \"%s\" (currentline: %s, numparams: %s, nups: %s, is_vararg: %s)"):format(tostring(Object), Stringify(Info.source), Info.what, Stringify(Info.name), Info.currentline, Info.numparams, Info.nups, Info.is_vararg)
     else
         return Tostring(Object)
     end
@@ -93,7 +94,7 @@ _PrintTable = function(Table, Indents, Checked)
         Count += 1
     end
 
-    return (Metatable and "setmetatable(%s, %s)" or "%s"):format(TableCount == 0 and "{}" or ("{\n%s%s}"):format(Result, string.rep(TabWidth, Indents - 1)), Metatable and PrintTable(Metatable))
+    return (Metatable and "setmetatable(%s, %s)" or "%s"):format(TableCount == 0 and "{}" or ("{\n%s%s}"):format(Result, string.rep(TabWidth, Indents - 1)), Metatable and _PrintTable(Metatable))
 end
 
 getgenv().PrintTable = newcclosure(function(Table)
