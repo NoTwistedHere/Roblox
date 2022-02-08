@@ -152,7 +152,7 @@ end)
 local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(self, ...)
     local Arguments = {...}
 
-    if self:IsA("RemoteFunction") and TrueString(Arguments[1]) == "OnClientInvoke" and type(Arguments[2]) == "function" then
+    if self:IsA("RemoteFunction") and TrueString(Arguments[1]) == "OnClientInvoke" and type(Arguments[2]) == "function" and islclosure(Arguments[2]) then
         local ClassName = self.ClassName
         local Name = Stringify(GetFullName(self))
         local Function = Arguments[2]
@@ -165,7 +165,7 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(sel
                 local InvokedArguments = {...}
                 local Response = {Old(...)}
 
-                if RemoteSpyEnabled and Enabled[ClassName] then
+                if not getinfo(3) and RemoteSpyEnabled and Enabled[ClassName] then
                     Log(Name, "ClientInvoke", Stringify(Info.short_src), Timestamp(), InvokedArguments, Info, Response)
                 end
 
