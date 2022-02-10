@@ -39,7 +39,7 @@ local function CountTable(Table)
 end
 
 local function Stringify(String)
-    local Stringified = String:gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("[%c%s]", function(Char) return "\\"..(utf8.codepoint(Char) or 0) end)
+    local Stringified = String:gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("[%c%s]", function(Char) if Char ~= " " then return "\\"..(utf8.codepoint(Char) or 0) end end)
 
     return Stringified
 end
@@ -69,7 +69,7 @@ local ParseObject = function(Object)
     elseif ObjectType == 3 then
         return Stringify(Object:GetFullName())
     elseif ObjectType == 4 then
-        return Tostring(Object)..(getrawmetatable(Object) ~= nil and " [Metatable]" or "")
+        return Tostring(Object)..(getrawmetatable(Object) and " [Metatable]" or "")
     elseif ObjectType == 5 then
         local Info = getinfo(Object)
         return ("%s --// source: %s, what: %s, name: \"%s\" (currentline: %s, numparams: %s, nups: %s, is_vararg: %s)"):format(tostring(Object), Stringify(Info.source), Info.what, Stringify(Info.name), Info.currentline, Info.numparams, Info.nups, Info.is_vararg)
@@ -90,11 +90,11 @@ _PrintTable = function(Table, Indents, Checked)
         local IsValid = type(v) == "table" and not Checked[v]
         local Value = IsValid and _PrintTable(v, Indents + 1, Checked) or ParseObject(v)
 
-        Result ..= ("%s[%s] = %s%s%s\n"):format(string.rep(TabWidth, Indents), ParseObject(i), Value, Count < TableCount and "," or "", ((IsValid and ObjectTypes[typeof(v)]) or 0) >= 4 and (" --// %s"):format(Tostring(v)) or "")
+        Result ..= ("%s[%s] = %s%s%s\n"):format(string.rep(TabWidth, Indents), ParseObject(i), Value, Count < TableCount and "," or "", ((IsValid and ObjectTypes[typeof(v)]) or 0) >= 4 and (" --// %s"):format(ParseObject(v)) or "")
         Count += 1
     end
 
-    return (Metatable and "setmetatable(%s, %s)" or "%s"):format(TableCount == 0 and "{}" or ("{\n%s%s}"):format(Result, string.rep(TabWidth, Indents - 1)), Metatable and _PrintTable(Metatable))
+    return (Metatable and "setmetatable(%s, %s)" or "%s"):format(TableCount == 0 and "{}" or ("{\n%s%s}"):format(Result, string.rep(TabWidth, Indents - 1)), Metatable and _PrintTable(Metatable, Indents, Checked))
 end
 
 getgenv().PrintTable = newcclosure(function(Table)
