@@ -39,9 +39,11 @@ local function CountTable(Table)
 end
 
 local function Stringify(String)
-    local Stringified = String:gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("[%c%s]", function(Char) if Char ~= " " then return "\\"..(utf8.codepoint(Char) or 0) end end)
-
-    return Stringified
+    if type(String) ~= "string" then
+        return;
+    end
+    
+    return String:gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("[%c%s]", function(Char) if Char ~= " " then return "\\"..(utf8.codepoint(Char) or 0) end end)
 end
 
 local Tostring = function(Object)
