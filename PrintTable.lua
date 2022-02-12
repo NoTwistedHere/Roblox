@@ -94,20 +94,20 @@ local ParseObject = function(Object, DetailedInfo)
             return Tostring(Object)
         elseif ObjectType == 2 then
             local String, Modified = Unrep(Stringify(Object))
-            return ("\"%s\"%s"):format(String, Modified and " [Modified]" or "")
+            return ("\"%s\""):format(String),  Modified and " [Modified]"
         elseif ObjectType == 3 then
             return Stringify(Object:GetFullName())
         elseif ObjectType == 4 then
-            return Tostring(Object) .. (getrawmetatable(Object) and " [Metatable]" or "")
+            return Tostring(Object), getrawmetatable(Object) and " [Metatable]"
         elseif ObjectType == 5 then
             local Info = getinfo(Object)
-            return ("%s --// source: %s, what: %s, name: \"%s\" (currentline: %s, numparams: %s, nups: %s, is_vararg: %s)"):format(tostring(Object), Stringify(Info.source), Info.what, Stringify(Info.name), Info.currentline, Info.numparams, Info.nups, Info.is_vararg)
+            return ("%s"):format(tostring(Object)), ("source: %s, what: %s, name: \"%s\" (currentline: %s, numparams: %s, nups: %s, is_vararg: %s)"):format(Stringify(Info.source), Info.what, Stringify(Info.name), Info.currentline, Info.numparams, Info.nups, Info.is_vararg)
         else
             return Tostring(Object)
         end
     end
 
-    return _Parse() .. (DetailedInfo and IsValid and (" [%s]"):format(Type) or "")
+    return DetailedInfo and IsValid and ("%s --// %s"):format(_Parse(), (" [%s]"):format(Type)) or _Parse()
 end
 
 _PrintTable = function(Table, Indents, Checked)
