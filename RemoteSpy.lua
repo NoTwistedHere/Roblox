@@ -27,7 +27,7 @@ local hookmetamethod = hookmetamethod or newcclosure(function(Object, Metamethod
     local Metatable = assert(getrawmetatable(Object), ("bad argument #1 (%s does not have a metatable)"):format(tostring(typeof(Object))))
     local Original = assert(rawget(Metatable, Metamethod), "bad argument #2 (metamethod doesn't exist)")
     assert(type(Function) == "function", "bad argument #3 (function expected)")
-
+    
     return hookfunction(Original, Function)
 end)
 
@@ -49,9 +49,8 @@ local function Stringify(String)
     if type(String) ~= "string" then
         return;
     end
-
-    local Stringified = String:gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("[%c%s]", function(Char) return "\\"..(utf8.codepoint(Char) or 0) end)
-    return Stringified
+    
+    return String:gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("[%c%s]", function(Char) if Char ~= " " then return "\\"..(utf8.codepoint(Char) or 0) end end)
 end
 
 local function TrueString(String)
@@ -100,11 +99,27 @@ local function Log(...)
         end
     end
 
-    if Arguments[7] then
+    if Arguments[1] == "OnClientInvoke" then
         return rconsolewarn(("\nWhat: %s\nMethod: %s\nTo Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s"):format(Arguments[1], Arguments[2], Arguments[3], Arguments[4], Arguments[5], Arguments[7], Arguments[6]))
+    elseif Arguments[7] then
+        return rconsolewarn(("\nWhat: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s"):format(Arguments[1], Arguments[2], Arguments[3], Arguments[4], Arguments[5], Arguments[7], Arguments[6]))
     end
 
-    rconsolewarn(("\nWhat: %s\nMethod: %s\nTo Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s"):format(Arguments[1], Arguments[2], Arguments[3], Arguments[4], Arguments[5], Arguments[6]))
+    rconsolewarn(("\nWhat: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s"):format(Arguments[1], Arguments[2], Arguments[3], Arguments[4], Arguments[5], Arguments[6]))
+end
+
+local function ArgGuard(self, ...)
+    if typeof(self) ~= "Instance" then
+        return false
+    end
+
+    for i, v in next, {...} do
+        if type(v) == "table" and rawget(v, v) then
+            return false
+        end
+    end
+
+    return true
 end
 
 local pcall, unpack, assert = pcall, unpack, assert
@@ -112,20 +127,21 @@ local pcall, unpack, assert = pcall, unpack, assert
 for Name, Method in next, Methods do
     local Original; Original = hookfunction(Instance.new(Name)[Method], function(...)
         local Arguments = {...}
-        local self = ...
-        local Response = Original(...)
-        local ClassName = self.ClassName
+        local self = Arguments[1]
+        local Response = "Disabled" --Original(...)
         local Info = getinfo(3)
 
-        if RemoteSpyEnabled and Enabled[ClassName] and not Ignore(...) then
-            if ClassName:match("Function") then
+        if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and not Ignore(...) then
+            table.remove(Arguments, 1)
+
+            if self.ClassName:match("Function") then
                 Log(GetFullName(self), Method, Info.short_src, Timestamp(), Arguments, Info, Response)
             else
                 Log(GetFullName(self), Method, Info.short_src, Timestamp(), Arguments, Info)
             end
         end
-    
-        return unpack(Response)
+
+        return Original(...) --unpack(Response)
     end)
 end
 
@@ -152,31 +168,28 @@ end)
 local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(self, ...)
     local Arguments = {...}
 
-    if self:IsA("RemoteFunction") and TrueString(Arguments[1]) == "OnClientInvoke" and type(Arguments[2]) == "function" and islclosure(Arguments[2]) then
+    if self:IsA("RemoteFunction") and TrueString(Arguments[1]) == "OnClientInvoke" and type(Arguments[2]) == "function" and islclosure(Arguments[2]) and not (islclosure(Function) and #getupvalues(Function) == 0 and #getconstants(Function) == 1 and typeof(getconstant(Function, 1)) == "userdata") then
         local ClassName = self.ClassName
         local Name = Stringify(GetFullName(self))
         local Function = Arguments[2]
         local Info = getinfo(Function)
+        local Old;
 
-        if not (islclosure(Function) and #getupvalues(Function) == 0 and #getconstants(Function) == 1 and typeof(getconstant(Function, 1)) == "userdata") then
-            local Old;
-            
-            local function DoOtherFunction(...)
-                local InvokedArguments = {...}
-                local Response = {Old(...)}
+        local function DoOtherFunction(...)
+            local InvokedArguments = {...}
+            local Response = {Old(...)}
 
-                if not getinfo(3) and RemoteSpyEnabled and Enabled[ClassName] then
-                    Log(Name, "ClientInvoke", Stringify(Info.short_src), Timestamp(), InvokedArguments, Info, Response)
-                end
-
-                return unpack(Response)
+            if not getinfo(3) and RemoteSpyEnabled and Enabled[ClassName] and not Ignore(self, ...) then
+                Log(Name, "ClientInvoke", Stringify(Info.short_src), Timestamp(), InvokedArguments, Info, Response)
             end
-            
-            Old = hookfunction(Function, function(...)
-                return DoOtherFunction(...)
-            end)
+
+            return unpack(Response)
         end
+
+        Old = hookfunction(Function, function(...)
+            return DoOtherFunction(...)
+        end)
     end
-    
+
     return OldNewIndex(self, ...)
 end)
