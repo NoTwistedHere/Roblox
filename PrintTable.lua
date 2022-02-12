@@ -84,10 +84,9 @@ local Tostring = function(Object)
     return Response or tostring(Object)
 end
 
-local ParseObject = function(Object, DetailedInfo)
+local ParseObject = function(Object, DetailedInfo, TypeOf)
     local Type = typeof(Object)
     local ObjectType = ObjectTypes[Type]
-    local IsValid = ObjectType and ObjectType < 4 and ObjectType > 5
     
     local function _Parse()
         if ObjectType == 1 then
@@ -109,7 +108,7 @@ local ParseObject = function(Object, DetailedInfo)
 
     local Parsed = {_Parse()}
 
-    return DetailedInfo and IsValid and ("%s --//%s%s"):format(Parsed[1], Parsed[2] or "", (" [%s]"):format(Type)) or _Parse()
+    return (DetailedInfo or TypeOf) and ("%s --//%s%s"):format(Parsed[1], DetailedInfo and Parsed[2] or "", TypeOf and (" [%s]"):format(Type) or "") or _Parse()
 end
 
 _PrintTable = function(Table, Indents, Checked)
@@ -122,9 +121,9 @@ _PrintTable = function(Table, Indents, Checked)
 
     for i,v in next, Table do
         local IsValid = type(v) == "table" and not Checked[v]
-        local Value = IsValid and _PrintTable(v, Indents + 1, Checked) or ParseObject(v, true)
+        local Value = IsValid and _PrintTable(v, Indents + 1, Checked) or ParseObject(v, true, true)
 
-        Result ..= ("%s[%s] = %s%s%s\n"):format(string.rep(TabWidth, Indents), ParseObject(i), Value, Count < TableCount and "," or "", ((IsValid and ObjectTypes[typeof(v)]) or 0) >= 4 and (" --// %s"):format(ParseObject(v)) or "")
+        Result ..= ("%s[%s] = %s%s%s\n"):format(string.rep(TabWidth, Indents), ParseObject(i), Value, Count < TableCount and "," or "", ((IsValid and ObjectTypes[typeof(v)]) or 0) >= 4 and (" --// %s"):format(ParseObject(v), true) or "")
         Count += 1
     end
 
