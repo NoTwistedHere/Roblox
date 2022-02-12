@@ -126,8 +126,6 @@ _PrintTable = function(Table, Indents, Checked)
         local Value = IsValid and _PrintTable(v, Indents + 1, Checked) or Parsed[1]
         local Comment = (IsValid and (" %s"):format(Parsed[1]) or "") .. (Parsed[2] or "")
 
-        warn(Parsed[2])
-
         Result ..= ("%s[%s] = %s%s%s\n"):format(string.rep(TabWidth, Indents), ParseObject(i), Value, Count < TableCount and "," or "", #Comment > 0 and " --//" .. Comment or "")
         Count += 1
     end
