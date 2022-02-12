@@ -66,8 +66,9 @@ local function Stringify(String)
     if type(String) ~= "string" then
         return;
     end
-    
-    return String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("[%c%s]", function(Char) if Char ~= " " then return "\\"..(utf8.codepoint(Char) or 0) end end)
+
+    local NewString = String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("[%c%s]", function(Char) if Char ~= " " then return "\\"..(utf8.codepoint(Char) or 0) end end)
+    return NewString
 end
 
 local Tostring = function(Object)
@@ -93,7 +94,7 @@ local ParseObject = function(Object, DetailedInfo, TypeOf)
             return Tostring(Object)
         elseif ObjectType == 2 then
             local String, Modified = Unrep(Stringify(Object))
-            return ("\"%s\""):format(String),  Modified and " [Modified]"
+            return ("\"%s\""):format(String), Modified and " [Modified]"
         elseif ObjectType == 3 then
             return Stringify(Object:GetFullName())
         elseif ObjectType == 4 then
@@ -108,7 +109,7 @@ local ParseObject = function(Object, DetailedInfo, TypeOf)
 
     local Parsed = {_Parse()}
 
-    return (DetailedInfo or TypeOf) and ("%s --//%s%s"):format(Parsed[1], DetailedInfo and Parsed[2] or "", TypeOf and (" [%s]"):format(Type) or "") or _Parse()
+    return Parsed[1], (DetailedInfo and Parsed[2] or "") .. (TypeOf and (" [%s]"):format(Type) or "")
 end
 
 _PrintTable = function(Table, Indents, Checked)
@@ -121,9 +122,13 @@ _PrintTable = function(Table, Indents, Checked)
 
     for i,v in next, Table do
         local IsValid = type(v) == "table" and not Checked[v]
-        local Value = IsValid and _PrintTable(v, Indents + 1, Checked) or ParseObject(v, true, true)
+        local Parsed = {ParseObject(v, true, true)}
+        local Value = IsValid and _PrintTable(v, Indents + 1, Checked) or Parsed[1]
+        local Comment = (IsValid and (" %s"):format(Parsed[1]) or "") .. (Parsed[2] or "")
 
-        Result ..= ("%s[%s] = %s%s%s\n"):format(string.rep(TabWidth, Indents), ParseObject(i), Value, Count < TableCount and "," or "", ((IsValid and ObjectTypes[typeof(v)]) or 0) >= 4 and (" --// %s"):format(ParseObject(v), true) or "")
+        warn(Parsed[2])
+
+        Result ..= ("%s[%s] = %s%s%s\n"):format(string.rep(TabWidth, Indents), ParseObject(i), Value, Count < TableCount and "," or "", #Comment > 0 and " --//" .. Comment or "")
         Count += 1
     end
 
