@@ -128,7 +128,7 @@ local function GetCaller()
 
         if not Info then
             return { "Unknown" }
-        elseif Info.what == "[C]" or is_synapse_function(Info.func) then
+        elseif Info.what == "C" or is_synapse_function(Info.func) then
             continue;
         end
 
