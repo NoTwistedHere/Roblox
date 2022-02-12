@@ -38,12 +38,36 @@ local function CountTable(Table)
     return Count
 end
 
+local function Unrep(String)
+    local Counts = {}
+    
+    for i, v in next, String:split("") do
+        if not Counts[v] then
+            Counts[v] = 0
+        end
+        
+        Counts[v] += 1
+    end
+    
+    for i, v in next, Counts do
+        if v > 10 then
+            local Subbed = false
+            String = String:gsub(i, function(C) if not Subbed then Subbed = true return C end return "" end)
+            continue
+        end
+        
+        Counts[i] = nil
+    end
+    
+    return String, CountTable(Counts) > 0
+end
+
 local function Stringify(String)
     if type(String) ~= "string" then
         return;
     end
     
-    return String:gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("[%c%s]", function(Char) if Char ~= " " then return "\\"..(utf8.codepoint(Char) or 0) end end)
+    return String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("[%c%s]", function(Char) if Char ~= " " then return "\\"..(utf8.codepoint(Char) or 0) end end)
 end
 
 local Tostring = function(Object)
@@ -60,24 +84,30 @@ local Tostring = function(Object)
     return Response or tostring(Object)
 end
 
-local ParseObject = function(Object)
+local ParseObject = function(Object, DetailedInfo)
     local Type = typeof(Object)
     local ObjectType = ObjectTypes[Type]
-
-    if ObjectType == 1 then
-        return Tostring(Object)
-    elseif ObjectType == 2 then
-        return ("\"%s\""):format(Stringify(Object))
-    elseif ObjectType == 3 then
-        return Stringify(Object:GetFullName())
-    elseif ObjectType == 4 then
-        return Tostring(Object)..(getrawmetatable(Object) and " [Metatable]" or "")
-    elseif ObjectType == 5 then
-        local Info = getinfo(Object)
-        return ("%s --// source: %s, what: %s, name: \"%s\" (currentline: %s, numparams: %s, nups: %s, is_vararg: %s)"):format(tostring(Object), Stringify(Info.source), Info.what, Stringify(Info.name), Info.currentline, Info.numparams, Info.nups, Info.is_vararg)
-    else
-        return Tostring(Object)
+    local IsValid = ObjectType and ObjectType < 4 and ObjectType > 5
+    
+    local function _Parse()
+        if ObjectType == 1 then
+            return Tostring(Object)
+        elseif ObjectType == 2 then
+            local String, Modified = Unrep(Stringify(Object))
+            return ("\"%s\"%s"):format(String, Modified and " [Modified]" or "")
+        elseif ObjectType == 3 then
+            return Stringify(Object:GetFullName())
+        elseif ObjectType == 4 then
+            return Tostring(Object) .. (getrawmetatable(Object) and " [Metatable]" or "")
+        elseif ObjectType == 5 then
+            local Info = getinfo(Object)
+            return ("%s --// source: %s, what: %s, name: \"%s\" (currentline: %s, numparams: %s, nups: %s, is_vararg: %s)"):format(tostring(Object), Stringify(Info.source), Info.what, Stringify(Info.name), Info.currentline, Info.numparams, Info.nups, Info.is_vararg)
+        else
+            return Tostring(Object)
+        end
     end
+
+    return _Parse() .. (DetailedInfo and IsValid and (" [%s]"):format(Type) or "")
 end
 
 _PrintTable = function(Table, Indents, Checked)
@@ -90,7 +120,7 @@ _PrintTable = function(Table, Indents, Checked)
 
     for i,v in next, Table do
         local IsValid = type(v) == "table" and not Checked[v]
-        local Value = IsValid and _PrintTable(v, Indents + 1, Checked) or ParseObject(v)
+        local Value = IsValid and _PrintTable(v, Indents + 1, Checked) or ParseObject(v, true)
 
         Result ..= ("%s[%s] = %s%s%s\n"):format(string.rep(TabWidth, Indents), ParseObject(i), Value, Count < TableCount and "," or "", ((IsValid and ObjectTypes[typeof(v)]) or 0) >= 4 and (" --// %s"):format(ParseObject(v)) or "")
         Count += 1
