@@ -18,6 +18,7 @@ local Methods = {
     RemoteFunction = "InvokeServer"
 }
 local GetFullName = game.GetFullName
+local isexecutorfunction = isexecutorfunction or is_synapse_function or isexecutorclosure or isourclosure or function(f) return getinfo(f, "s").source:find("@") and true or false end
 local getthreadcontext = getthreadcontext or getthreadidentity or (syn and syn.get_thread_identity)
 local setthreadcontext = setthreadcontext or setthreadcontext or (syn and syn.set_thread_identity)
 local rconsolewarn = rconsolewarn or newcclosure(function(String)
@@ -31,7 +32,7 @@ local hookmetamethod = hookmetamethod or newcclosure(function(Object, Metamethod
     return hookfunction(Original, Function)
 end)
 
-if not getthreadcontext or not setthreadcontext then
+if not getthreadcontext or not setthreadcontext or not getinfo then
     if not game:GetService("Players").LocalPlayer then
         game:Shutdown()
         return;
@@ -128,7 +129,7 @@ local function GetCaller()
 
         if not Info then
             return { "Unknown" }
-        elseif Info.what == "C" or is_synapse_function(Info.func) then
+        elseif Info.what == "C" or isexecutorfunction(Info.func) then
             continue;
         end
 
