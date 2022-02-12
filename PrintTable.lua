@@ -107,7 +107,7 @@ local ParseObject = function(Object, DetailedInfo)
         end
     end
 
-    local Parsed = _Parse()
+    local Parsed = {_Parse()}
 
     return DetailedInfo and IsValid and ("%s --//%s%s"):format(Parsed[1], Parsed[2] or "", (" [%s]"):format(Type)) or _Parse()
 end
