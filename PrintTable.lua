@@ -107,7 +107,9 @@ local ParseObject = function(Object, DetailedInfo)
         end
     end
 
-    return DetailedInfo and IsValid and ("%s --// %s"):format(_Parse(), (" [%s]"):format(Type)) or _Parse()
+    local Parsed = _Parse()
+
+    return DetailedInfo and IsValid and ("%s --//%s%s"):format(Parsed[1], Parsed[2] or "", (" [%s]"):format(Type)) or _Parse()
 end
 
 _PrintTable = function(Table, Indents, Checked)
