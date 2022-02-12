@@ -122,6 +122,20 @@ local function ArgGuard(self, ...)
     return true
 end
 
+local function GetCaller()
+    for i = 1, 16380 do
+        local Info = getinfo(i)
+
+        if not Info then
+            return { "Unknown" }
+        elseif Info.what == "[C]" or is_synapse_function(Info.func) then
+            continue;
+        end
+
+        return Info
+    end
+end
+
 local pcall, unpack, assert = pcall, unpack, assert
 
 for Name, Method in next, Methods do
@@ -129,7 +143,7 @@ for Name, Method in next, Methods do
         local Arguments = {...}
         local self = Arguments[1]
         local Response = "Disabled" --Original(...)
-        local Info = getinfo(3)
+        local Info = GetCaller()
 
         if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and not Ignore(...) then
             table.remove(Arguments, 1)
@@ -153,7 +167,7 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
     local Arguments = {...}
 
     if Methods[ClassName] and Enabled[ClassName] and RemoteSpyEnabled and CheckDep(Method, Methods[ClassName]) and not Ignore(...) then
-        local Info = getinfo(3)
+        local Info = GetCaller()
 
         if ClassName:match("Function") then
             Log(GetFullName(self), Method, Info.short_src, Timestamp(), Arguments, Info, Response)
