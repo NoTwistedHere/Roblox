@@ -60,7 +60,7 @@ local function SteralizeString(String)
 end
 
 local function MakeInstance(Object)
-    local IntResult = ("<Item class=\"%s\" referent=\"RBX%s\"><Properties><string name=\"Name\">%s</string>"):format(ClassName(Object), ClassName(Object, true), SteralizeString(Object.Name))
+    local IntResult = ("<Item class=\"%s\" referent=\"RBX%s\"><Properties><string name=\"Name\">%s</string>"):format(ClassName(Object), Object:GetDebugId(0), SteralizeString(Object.Name))
     ProgressBar(InstancesCreated, InstancesTotal)
     
     if (Object.ClassName == "LocalScript" or Object.ClassName == "ModuleScript") then
