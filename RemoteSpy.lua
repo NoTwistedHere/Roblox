@@ -161,23 +161,21 @@ for Name, Method in next, Methods do
 end
 
 local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...)
-    local self = ...
-    local Response = {OldNamecall(...)}
-    local ClassName = self.ClassName
-    local Method = getnamecallmethod() or ""
     local Arguments = {...}
-
-    if Methods[ClassName] and Enabled[ClassName] and RemoteSpyEnabled and CheckDep(Method, Methods[ClassName]) and not Ignore(...) then
+    local self = Arguments[1]
+    local Method = getnamecallmethod() or ""
+    
+    if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and CheckDep(Method, Methods[self.ClassName]) and not Ignore(...) then
         local Info = GetCaller()
 
-        if ClassName:match("Function") then
-            Log(GetFullName(self), Method, Info.short_src, Timestamp(), Arguments, Info, Response)
+        if self.ClassName:match("Function") then
+            Log(GetFullName(self), Method, Info.short_src, Timestamp(), Arguments, Info, "Disabled")
         else
-            Log(GetFullName(self), Method, Info.short_src, Timestamp(), Arguments, Info, Response)
+            Log(GetFullName(self), Method, Info.short_src, Timestamp(), Arguments, Info)
         end
     end
 
-    return unpack(Response)
+    return OldNamecall(...)
 end)
 
 local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(self, ...)
