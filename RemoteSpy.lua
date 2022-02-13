@@ -163,10 +163,12 @@ end
 local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...)
     local Arguments = {...}
     local self = Arguments[1]
-    local Method = getnamecallmethod() or ""
+    local Method = getnamecallmethod()
     
-    if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and CheckDep(Method, Methods[self.ClassName]) and not Ignore(...) then
+    if RemoteSpyEnabled and typeof(self) == "Instance" and Enabled[self.ClassName] and CheckDep(Method, Methods[self.ClassName]) and ArgGuard(...) and not Ignore(...) then
         local Info = GetCaller()
+
+        table.remove(Arguments, 1)
 
         if self.ClassName:match("Function") then
             Log(GetFullName(self), Method, Info.short_src, Timestamp(), Arguments, Info, "Disabled")
