@@ -12,8 +12,9 @@ local Instances = {
     "RemoteEvent";
     "RemoteFunction";
 }
-local Blacklisted = {
-    "ProximityPromptService"
+local Services = {
+    "StarterPlayerScripts";
+    "StarterCharacterScripts";
 }
 local SpecialCharacters = {
     ["<"] = "&lt;";
@@ -45,14 +46,20 @@ local function CheckObject(Object)
     return false
 end
 
-local function ClassName(Object, Check)
+local function FindService(Service)
+    local Success, Response = pcall(game.FindService, game, Service)
+
+    return Success and Response
+end
+
+local function GetClassName(Object)
     local ClassName = Object.ClassName
 
-    if (table.find(Instances, ClassName) or (Object:IsA(Object.Name) and Object.Parent == game and Object:FindService(Object.Name) == Object)) and not table.find(Blacklisted, ClassName) then
+    if table.find(Instances, ClassName) or table.find(Services, ClassName) or FindService(ClassName) then
         return ClassName
     end
 
-    return Check and Object:GetDebugId(0) or "Folder"
+    return "Folder"
 end
 
 local function SteralizeString(String)
@@ -60,15 +67,17 @@ local function SteralizeString(String)
 end
 
 local function MakeInstance(Object)
-    local IntResult = ("<Item class=\"%s\" referent=\"RBX%s\"><Properties><string name=\"Name\">%s</string>"):format(ClassName(Object), Object:GetDebugId(0), SteralizeString(Object.Name))
+    local ClassName = Object.ClassName
+    local IntResult = ("<Item class=\"%s\" referent=\"RBX%s\"><Properties><string name=\"Name\">%s</string>"):format(GetClassName(Object), Object:GetDebugId(0), SteralizeString(Object.Name))
     ProgressBar(InstancesCreated, InstancesTotal)
     
-    if (Object.ClassName == "LocalScript" or Object.ClassName == "ModuleScript") then
-        if Object.ClassName == "LocalScript" then
-            IntResult ..= ("<bool name=\"Disabled\">%s</bool>"):format(tostring(Object.Disabled))
-        end
+    if (ClassName == "LocalScript" or ClassName == "ModuleScript") then
         local Hash = getscripthash(Object)
         local Source = Hash and (DecompiledScripts[Hash] or "--// Not Found") or "--// Script has no bytecode"
+
+        if ClassName == "LocalScript" then
+            IntResult ..= ("<bool name=\"Disabled\">%s</bool>"):format(tostring(Object.Disabled))
+        end
         
         IntResult ..= ([==[<ProtectedString name="Source"><![CDATA[%s]]></ProtectedString>]==]):format(("--//Hash: %s\n%s"):format(Hash or "nil", Source))
     end
@@ -153,7 +162,7 @@ rconsoleprint("Collecting Scripts\n")
 GetScripts(getscripts())
 GetScripts(getnilinstances())
 GetScripts(game:GetDescendants())
-DecompileScripts()
+--DecompileScripts()
 rconsoleprint("\n\nCreating XML\n")
 ProgressBar(0, 1)
 

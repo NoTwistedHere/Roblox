@@ -19,6 +19,7 @@ local Required = {
 for i, v in next, Required do
     if not getfenv()[v] then
         if not game:GetService("Players").LocalPlayer then
+            game:Shutdown()
             return;
         end
 
@@ -113,7 +114,7 @@ end
 
 _PrintTable = function(Table, Indents, Checked)
     local TableCount, TabWidth, Result, Count = CountTable(Table), "    ", "", 1
-    local Metatable = getrawmetatable(Table)
+    local Metatable = getmetatable(Table)
 
     Checked = Checked or {}
     Indents = Indents or 1
@@ -129,14 +130,14 @@ _PrintTable = function(Table, Indents, Checked)
         Count += 1
     end
 
-    return (Metatable and "setmetatable(%s, %s)" or "%s"):format(TableCount == 0 and "{}" or ("{\n%s%s}"):format(Result, string.rep(TabWidth, Indents - 1)), Metatable and _PrintTable(Metatable, Indents, Checked))
+    return (Metatable and "setmetatable(%s, %s)" or "%s"):format(TableCount == 0 and "{}" or ("{\n%s%s}"):format(Result, string.rep(TabWidth, Indents - 1)), type(Metatable) == "table" and _PrintTable(Metatable, Indents, Checked))
 end
 
-getgenv().PrintTable = newcclosure(function(Table)
+local PrintTable = function(Table)
     local Type = typeof(Table)
     assert((Type == "table" or Type == "userdata"), "PrintTable: Invalid Argument #1 (table or userdata expected)")
 
     local Success, Response = pcall(_PrintTable, Table)
 
     return (Success and Response) or ("PrintTable: \"%s\""):format(Response)
-end)
+end
