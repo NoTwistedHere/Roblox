@@ -21,9 +21,6 @@ local GetFullName = game.GetFullName
 local isexecutorfunction = isexecutorfunction or is_synapse_function or isexecutorclosure or isourclosure or function(f) return getinfo(f, "s").source:find("@") and true or false end
 local getthreadcontext = getthreadcontext or getthreadidentity or (syn and syn.get_thread_identity)
 local setthreadcontext = setthreadcontext or setthreadcontext or (syn and syn.set_thread_identity)
-local rconsolewarn = rconsolewarn or newcclosure(function(String)
-    rconsoleprint(("\n[*] %s"):format(String))
-end)
 local hookmetamethod = hookmetamethod or newcclosure(function(Object, Metamethod, Function)
     local Metatable = assert(getrawmetatable(Object), ("bad argument #1 (%s does not have a metatable)"):format(tostring(typeof(Object))))
     local Original = assert(rawget(Metatable, Metamethod), "bad argument #2 (metamethod doesn't exist)")
@@ -33,17 +30,8 @@ local hookmetamethod = hookmetamethod or newcclosure(function(Object, Metamethod
 end)
 
 if not getthreadcontext or not setthreadcontext or not getinfo then
-    if not game:GetService("Players").LocalPlayer then
-        game:Shutdown()
-        return;
-    end
-
     game:GetService("Players").LocalPlayer:Kick("Unsupported exploit")
     return;
-end
-
-if rconsolename then
-    rconsolename("RemoteSpy")
 end
 
 local function Stringify(String)

@@ -9,28 +9,10 @@ local ObjectTypes = {
     ["function"] = 5;
 }
 
-local Required = {
-    "getinfo";
-    "isreadonly";
-    "getrawmetatable";
-    "newcclosure";
-}
-
-for i, v in next, Required do
-    if not getfenv()[v] then
-        if not game:GetService("Players").LocalPlayer then
-            return;
-        end
-
-        game:GetService("Players").LocalPlayer:Kick("Unsupported exploit")
-        return;
-    end
-end
-
 local function CountTable(Table)
     local Count = 0
 
-    for _, _ in next, Table do
+    for _ in next, Table do
         Count += 1
     end
 
@@ -49,7 +31,7 @@ local function Unrep(String)
     end
     
     for i, v in next, Counts do
-        if v > 10 then
+        if v > 100 then
             local Subbed = false
             String = String:gsub(i, function(C) if not Subbed then Subbed = true return C end return "" end)
             continue
@@ -70,7 +52,7 @@ local function Stringify(String)
     return NewString
 end
 
-local Tostring = function(Object)
+local function Tostring(Object)
     local Metatable = getrawmetatable(Object)
     local Response;
 
@@ -84,7 +66,7 @@ local Tostring = function(Object)
     return Response or tostring(Object)
 end
 
-local ParseObject = function(Object, DetailedInfo, TypeOf)
+local function ParseObject(Object, DetailedInfo, TypeOf)
     local Type = typeof(Object)
     local ObjectType = ObjectTypes[Type]
     
