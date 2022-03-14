@@ -1,11 +1,7 @@
---// Doesn't work, don't know how to fix, can't be bothered to fix
-
-local DecompiledScripts = {}
-local CoreGui, CorePackages, Players = game:GetService("CoreGui"), game:GetService("CorePackages"), game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+local CoreGui, CorePackages, Players, RunService = game:GetService("CoreGui"), game:GetService("CorePackages"), game:GetService("Players"), game:GetService("RunService")
 local Result = "<roblox xmlns:xmime=\"http://www.w3.org/2005/05/xmlmime\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"http://www.roblox.com/roblox.xsd\" version=\"4\">"
 local Decompiled, Scripts = 0, {}
-local InstancesCreated, InstancesTotal = 0, #game:GetDescendants()
+local DecompiledScripts = {}
 local Instances = {
     "LocalScript";
     "ModuleScript";
@@ -23,6 +19,23 @@ local SpecialCharacters = {
     ["\""] = "&quot;";
     ["'"] = "&apos;";
 }
+
+if not RunService:IsRunning() then --// So you can dump scripts in games that do a bit of funny business (I'm mainly trying to patch the things I come up with)
+    game.DescendantAdded:Connect(function(Obj)
+        if Obj:IsA("LocalScript") then
+            Obj.Disabled = true --// Not my fault if a game dev is actually smart (or maybe it is)
+        end
+    end)
+
+    --[[repeat
+        task.wait(0.5) --// There's no rush
+    until RunService:IsRunning()]]
+
+    game.Loaded:Wait()
+end
+
+local LocalPlayer = Players.LocalPlayer
+local InstancesCreated, InstancesTotal = 0, #game:GetDescendants()
 
 local function GiveColour(Current, Max)
     return (Current < Max * 0.25 and "@@RED@@") or (Current < Max * 0.5 and "@@YELLOW@@") or (Current < Max * 0.75 and "@@CYAN@@") or "@@GREEN@@"
