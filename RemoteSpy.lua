@@ -29,7 +29,7 @@ local hookmetamethod = hookmetamethod or newcclosure(function(Object, Metamethod
     return hookfunction(Original, Function)
 end)
 
-if not getthreadcontext or not setthreadcontext or not getinfo then
+if not isexecutorfunction or not getthreadcontext or not setthreadcontext or not getinfo or not hookmetamethod then
     game:GetService("Players").LocalPlayer:Kick("Unsupported exploit")
     return;
 end
@@ -63,23 +63,7 @@ local function Timestamp()
     return ("%s/%s/%s %s:%s:%s:%s"):format(Time:FormatUniversalTime("D", "en-us"), Time:FormatUniversalTime("M", "en-us"), Time:FormatUniversalTime("YYYY", "en-us"), Time:FormatUniversalTime("H", "en-us"), Time:FormatUniversalTime("m", "en-us"), Time:FormatUniversalTime("s", "en-us"), Time:FormatUniversalTime("SSS", "en-us"))--// broken?
 end
 
-local function CheckDep(String1, Comparison)
-    if not (type(String1) == "string" and type(Comparison) == "string") then
-        return false
-    end
-
-    local Dep = Comparison:sub(1, 1):lower()..Comparison:sub(2, 9e5)
-
-    if String1 == Comparison or String1 == Dep then
-        return true
-    end
-
-    return false
-end
-
-local Log = function(...)
-    local Arguments = {...}
-
+local function Log(Arguments)
     for i, v in next, Arguments do
         if type(v) == "string" then
             Arguments[i] = Stringify(v)
@@ -88,13 +72,11 @@ local Log = function(...)
         end
     end
 
-    if Arguments[1] == "OnClientInvoke" then
-        return rconsolewarn(("\nWhat: %s\nMethod: %s\nTo Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s"):format(Arguments[1], Arguments[2], Arguments[3], Arguments[4], Arguments[5], Arguments[7], Arguments[6]))
-    elseif Arguments[7] then
-        return rconsolewarn(("\nWhat: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s"):format(Arguments[1], Arguments[2], Arguments[3], Arguments[4], Arguments[5], Arguments[7], Arguments[6]))
+    if Arguments.Response then
+        return rconsolewarn(("\nWhat: %s\nMethod: %s\%s Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s"):format(Arguments.What, Arguments.Method, Arguments.Method == "OnClientInvoke" and "To" or "From", Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Response, Arguments.Info))
     end
 
-    rconsolewarn(("\nWhat: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s"):format(Arguments[1], Arguments[2], Arguments[3], Arguments[4], Arguments[5], Arguments[6]))
+    rconsolewarn(("\nWhat: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s"):format(Arguments.What, Arguments.Method, Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Info))
 end
 
 local function ArgGuard(self, ...)
@@ -116,7 +98,7 @@ local function GetCaller()
         local Info = getinfo(i)
 
         if not Info then
-            return { "Unknown" }
+            return getinfo(i - 1)
         elseif Info.what == "C" or isexecutorfunction(Info.func) then
             continue;
         end
@@ -125,45 +107,51 @@ local function GetCaller()
     end
 end
 
-local pcall, unpack, assert = pcall, unpack, assert
+local function SortArguments(self, ...)
+    return self, {...}
+end
 
 for Name, Method in next, Methods do
-    local Original; Original = hookfunction(Instance.new(Name)[Method], function(self, ...)
-        local Arguments = {...}
-        local Response = "Disabled" --Original(self, ...)
+    local Original; Original = hookfunction(Instance.new(Name)[Method], function(...)
+        local self, Arguments = SortArguments(...)
+        local Response = "Disabled" --Original( ...)
         local Info = GetCaller()
 
-        if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and not Ignore(...) then
-            if self.ClassName:match("Function") then
-                Log(GetFullName(self), Method, Info.short_src, Timestamp(), Arguments, Info, Response)
-            else
-                Log(GetFullName(self), Method, Info.short_src, Timestamp(), Arguments, Info)
+        task.spawn(function(...)
+            if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and not Ignore(...) then
+                if self.ClassName:match("Function") then
+                    Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Response = Response})
+                else
+                    Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info})
+                end
             end
-        end
+        end, ...)
 
-        return Original(self, ...) --unpack(Response)
+        return Original(...) --unpack(Response)
     end)
 end
 
-local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local Arguments = {...}
+local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...)
+    local self, Arguments = SortArguments(...)
     local Method = getnamecallmethod()
     
-    if RemoteSpyEnabled and typeof(self) == "Instance" and Enabled[self.ClassName] and CheckDep(Method, Methods[self.ClassName]) and ArgGuard(...) and not Ignore(...) then
-        local Info = GetCaller()
+    task.spawn(function(...)
+        if RemoteSpyEnabled and typeof(self) == "Instance" and Enabled[self.ClassName] and ArgGuard(...) and not Ignore(...) then
+            local Info = GetCaller()
 
-        if self.ClassName:match("Function") then
-            Log(GetFullName(self), Method, Info.short_src, Timestamp(), Arguments, Info, "Disabled")
-        else
-            Log(GetFullName(self), Method, Info.short_src, Timestamp(), Arguments, Info)
+            if self.ClassName:match("Function") then
+                Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Response = "Disabled"})
+            else
+                Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info})
+            end
         end
-    end
+    end, ...)
 
-    return OldNamecall(self, ...)
+    return OldNamecall(...)
 end)
 
-local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(self, ...)
-    local Arguments = {...}
+local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...)
+    local self, Arguments = SortArguments(...)
 
     if self:IsA("RemoteFunction") and TrueString(Arguments[1]) == "OnClientInvoke" and type(Arguments[2]) == "function" and islclosure(Arguments[2]) and not (islclosure(Function) and #getupvalues(Function) == 0 and #getconstants(Function) == 1 and typeof(getconstant(Function, 1)) == "userdata") then
         local ClassName = self.ClassName
@@ -177,7 +165,7 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(sel
             local Response = {Old(...)}
 
             if not getinfo(3) and RemoteSpyEnabled and Enabled[ClassName] and not Ignore(...) then
-                Log(Name, "ClientInvoke", Stringify(Info.short_src), Timestamp(), InvokedArguments, Info, Response)
+                Log({What = Name, Method = "ClientInvoke", Script = Stringify(Info.short_src), Timestamp = Timestamp(), Arguments = InvokedArguments, Info = Info, Response = Response})
             end
 
             return unpack(Response)
@@ -188,5 +176,5 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(sel
         end)
     end
 
-    return OldNewIndex(self, ...)
+    return OldNewIndex(...)
 end)
