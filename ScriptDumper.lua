@@ -21,9 +21,21 @@ local SpecialCharacters = {
 }
 
 if not RunService:IsRunning() then --// So you can dump scripts in games that do a bit of funny business (I'm mainly trying to patch the things I come up with)
+    local function IsNetworkOwner(Object)
+        if Object:IsA("BasePart") and isnetworkowner(Object) then
+            return true
+        elseif not Object.Parent then
+            return false
+        end
+
+        return IsNetworkOwner(Object.Parent)
+    end
+
     game.DescendantAdded:Connect(function(Obj)
         if Obj:IsA("LocalScript") then
-            Obj.Disabled = true --// Not my fault if a game dev is actually smart (or maybe it is)
+            --if not Obj:IsDescendantOf(workspace) then --// when will I be able to spoof network replication :(
+                Obj.Disabled = true --// Not my fault if a game dev is actually smart (or maybe it is)
+            --end
         end
     end)
 
