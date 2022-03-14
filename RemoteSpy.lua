@@ -60,7 +60,7 @@ end
 
 local function Timestamp()
     local Time = DateTime.now()
-    return ("%s/%s/%s %s:%s:%s:%s"):format(Time:FormatUniversalTime("D", "en-us"), Time:FormatUniversalTime("M", "en-us"), Time:FormatUniversalTime("YYYY", "en-us"), Time:FormatUniversalTime("H", "en-us"), Time:FormatUniversalTime("m", "en-us"), Time:FormatUniversalTime("s", "en-us"), Time:FormatUniversalTime("SSS", "en-us"))--// why is there no en-uk
+    return ("%s/%s/%s %s:%s:%s:%s"):format(Time:FormatUniversalTime("D", "en-us"), Time:FormatUniversalTime("M", "en-us"), Time:FormatUniversalTime("YYYY", "en-us"), Time:FormatUniversalTime("H", "en-us"), Time:FormatUniversalTime("m", "en-us"), Time:FormatUniversalTime("s", "en-us"), Time:FormatUniversalTime("SSS", "en-us"))--// broken?
 end
 
 local function CheckDep(String1, Comparison)
@@ -77,7 +77,7 @@ local function CheckDep(String1, Comparison)
     return false
 end
 
-local function Log(...)
+local Log = function(...)
     local Arguments = {...}
 
     for i, v in next, Arguments do
@@ -128,15 +128,12 @@ end
 local pcall, unpack, assert = pcall, unpack, assert
 
 for Name, Method in next, Methods do
-    local Original; Original = hookfunction(Instance.new(Name)[Method], function(...)
+    local Original; Original = hookfunction(Instance.new(Name)[Method], function(self, ...)
         local Arguments = {...}
-        local self = Arguments[1]
-        local Response = "Disabled" --Original(...)
+        local Response = "Disabled" --Original(self, ...)
         local Info = GetCaller()
 
         if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and not Ignore(...) then
-            table.remove(Arguments, 1)
-
             if self.ClassName:match("Function") then
                 Log(GetFullName(self), Method, Info.short_src, Timestamp(), Arguments, Info, Response)
             else
@@ -144,19 +141,16 @@ for Name, Method in next, Methods do
             end
         end
 
-        return Original(...) --unpack(Response)
+        return Original(self, ...) --unpack(Response)
     end)
 end
 
-local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...)
+local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     local Arguments = {...}
-    local self = Arguments[1]
     local Method = getnamecallmethod()
     
     if RemoteSpyEnabled and typeof(self) == "Instance" and Enabled[self.ClassName] and CheckDep(Method, Methods[self.ClassName]) and ArgGuard(...) and not Ignore(...) then
         local Info = GetCaller()
-
-        table.remove(Arguments, 1)
 
         if self.ClassName:match("Function") then
             Log(GetFullName(self), Method, Info.short_src, Timestamp(), Arguments, Info, "Disabled")
@@ -165,7 +159,7 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
         end
     end
 
-    return OldNamecall(...)
+    return OldNamecall(self, ...)
 end)
 
 local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(self, ...)
@@ -182,7 +176,7 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(sel
             local InvokedArguments = {...}
             local Response = {Old(...)}
 
-            if not getinfo(3) and RemoteSpyEnabled and Enabled[ClassName] and not Ignore(self, ...) then
+            if not getinfo(3) and RemoteSpyEnabled and Enabled[ClassName] and not Ignore(...) then
                 Log(Name, "ClientInvoke", Stringify(Info.short_src), Timestamp(), InvokedArguments, Info, Response)
             end
 
@@ -190,7 +184,7 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(sel
         end
 
         Old = hookfunction(Function, function(...)
-            return DoOtherFunction(...)
+            return DoOtherFunction(self, ...)
         end)
     end
 

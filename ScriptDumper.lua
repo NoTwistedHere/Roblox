@@ -79,12 +79,12 @@ local function MakeInstance(Object)
             IntResult ..= ("<bool name=\"Disabled\">%s</bool>"):format(tostring(Object.Disabled))
         end
         
-        IntResult ..= ([==[<ProtectedString name="Source"><![CDATA[%s]]></ProtectedString>]==]):format(("--//Hash: %s\n%s"):format(Hash or "nil", Source))
+        IntResult ..= ([==[<ProtectedString name="Source"><![CDATA[%s]]></ProtectedString>]==]):format(("--// Hash: %s\n%s"):format(Hash or "nil", Source))
     end
 
     IntResult ..= "</Properties>"
     for _, v in next, Object:GetChildren() do
-        if CheckObject(v) then
+        if v ~= nil and v ~= game and CheckObject(v) then --// Give me stength
             IntResult ..= MakeInstance(v)
         end
     end
@@ -162,7 +162,7 @@ rconsoleprint("Collecting Scripts\n")
 GetScripts(getscripts())
 GetScripts(getnilinstances())
 GetScripts(game:GetDescendants())
---DecompileScripts()
+DecompileScripts()
 rconsoleprint("\n\nCreating XML\n")
 ProgressBar(0, 1)
 
