@@ -133,7 +133,7 @@ for Name, Method in next, Methods do
         end]]
 
         task.spawn(function(...)
-            if RemoteSpyEnabled and Enabled[self.ClassName] and ArgGuard(...) and not Ignore(...) then
+            if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and not Ignore(...) then
                 if self.ClassName:match("Function") then
                     Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Response = Response})
                 else
@@ -156,7 +156,7 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
     end]]
     
     task.spawn(function(...)
-        if RemoteSpyEnabled and typeof(self) == "Instance" and Enabled[self.ClassName] and ArgGuard(...) and not Ignore(...) then
+        if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and not Ignore(...) then
             local Info = GetCaller()
 
             if self.ClassName:match("Function") then
