@@ -17,7 +17,7 @@ local Methods = {
     RemoteEvent = "FireServer",
     RemoteFunction = "InvokeServer"
 }
-local FileName = ("RemoteSpy Logs [%s] (%s).luau"):format(game.PlaceId, game.PlaceVersion)
+local FileName = ("RemoteSpy Logs [%s_%s]"):format(game.PlaceId, game.PlaceVersion)
 local GetFullName = game.GetFullName
 local isexecutorfunction = isexecutorfunction or is_synapse_function or isexecutorclosure or isourclosure or function(f) return getinfo(f, "s").source:find("@") and true or false end
 local hookmetamethod = hookmetamethod or newcclosure(function(Object, Metamethod, Function)
@@ -31,6 +31,17 @@ end)
 if not isexecutorfunction or not getinfo or not hookmetamethod then
     game:GetService("Players").LocalPlayer:Kick("Unsupported exploit")
     return;
+end
+
+if isfile(FileName) then
+    local Name, Count = "", 0
+
+    repeat
+        Count += 1
+        Name = FileName..(" (%d)"):format(Count)
+    until not isfile(Name)
+    
+    FileName = Name
 end
 
 local function Stringify(String)
@@ -156,7 +167,7 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
     end]]
     
     task.spawn(function(...)
-        if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and not Ignore(...) then
+        if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] == Method and not Ignore(...) then
             local Info = GetCaller()
 
             if self.ClassName:match("Function") then
