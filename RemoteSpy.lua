@@ -17,7 +17,7 @@ local Methods = {
     RemoteEvent = "FireServer",
     RemoteFunction = "InvokeServer"
 }
-local FileName = ("RemoteSpy Logs [%s:%s].luau"):format(game.PlaceId, game.PlaceVersion)
+local FileName = ("RemoteSpy Logs [%s] (%s).luau"):format(game.PlaceId, game.PlaceVersion)
 local GetFullName = game.GetFullName
 local isexecutorfunction = isexecutorfunction or is_synapse_function or isexecutorclosure or isourclosure or function(f) return getinfo(f, "s").source:find("@") and true or false end
 local hookmetamethod = hookmetamethod or newcclosure(function(Object, Metamethod, Function)
