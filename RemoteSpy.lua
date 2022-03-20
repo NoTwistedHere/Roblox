@@ -71,7 +71,7 @@ local function Log(Arguments)
     end
 
     if Arguments.Response then
-        return rconsolewarn(("\nWhat: %s\nMethod: %s\%s Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s"):format(Arguments.What, Arguments.Method, Arguments.Method == "OnClientInvoke" and "To" or "From", Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Response, Arguments.Info))
+        return rconsolewarn(("\nWhat: %s\nMethod: %s\n%s Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s"):format(Arguments.What, Arguments.Method, Arguments.Method == "OnClientInvoke" and "To" or "From", Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Response, Arguments.Info))
     end
 
     rconsolewarn(("\nWhat: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s"):format(Arguments.What, Arguments.Method, Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Info))
@@ -112,11 +112,15 @@ end
 for Name, Method in next, Methods do
     local Original; Original = hookfunction(Instance.new(Name)[Method], function(...)
         local self, Arguments = SortArguments(...)
-        local Response = "Disabled" --Original( ...)
+        local Response = "Disabled" --{pcall(Original, ...)}
         local Info = GetCaller()
 
+        --[[if not table.remove(Response, 1) then
+            return unpack(Response)
+        end]]
+
         task.spawn(function(...)
-            if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and not Ignore(...) then
+            if RemoteSpyEnabled and Enabled[self.ClassName] and not Ignore(...) then
                 if self.ClassName:match("Function") then
                     Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Response = Response})
                 else
@@ -132,20 +136,25 @@ end
 local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...)
     local self, Arguments = SortArguments(...)
     local Method = getnamecallmethod()
+    local Response = "Disabled" --{pcall(OldNamecall, ...)}
+
+    --[[if not table.remove(Response, 1) then
+        return unpack(Response)
+    end]]
     
     task.spawn(function(...)
-        if RemoteSpyEnabled and typeof(self) == "Instance" and Enabled[self.ClassName] and ArgGuard(...) and not Ignore(...) then
+        if RemoteSpyEnabled and typeof(self) == "Instance" and Enabled[self.ClassName] and not Ignore(...) then
             local Info = GetCaller()
 
             if self.ClassName:match("Function") then
-                Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Response = "Disabled"})
+                Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Response = Response})
             else
                 Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info})
             end
         end
     end, ...)
 
-    return OldNamecall(...)
+    return OldNamecall(...) --unpack(Response)
 end)
 
 local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...)
