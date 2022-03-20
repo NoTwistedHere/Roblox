@@ -17,6 +17,7 @@ local Methods = {
     RemoteEvent = "FireServer",
     RemoteFunction = "InvokeServer"
 }
+local FileName = ("RemoteSpy Logs [%s:%s].luau"):format(game.PlaceId, game.PlaceVersion)
 local GetFullName = game.GetFullName
 local isexecutorfunction = isexecutorfunction or is_synapse_function or isexecutorclosure or isourclosure or function(f) return getinfo(f, "s").source:find("@") and true or false end
 local hookmetamethod = hookmetamethod or newcclosure(function(Object, Metamethod, Function)
@@ -61,6 +62,18 @@ local function Timestamp()
     return ("%s/%s/%s %s:%s:%s:%s"):format(Time:FormatUniversalTime("D", "en-us"), Time:FormatUniversalTime("M", "en-us"), Time:FormatUniversalTime("YYYY", "en-us"), Time:FormatUniversalTime("H", "en-us"), Time:FormatUniversalTime("m", "en-us"), Time:FormatUniversalTime("s", "en-us"), Time:FormatUniversalTime("SSS", "en-us"))--// broken?
 end
 
+local function Save(Content)
+    if WriteToFile then
+        if not isfile(FileName) then
+            return writefile(FileName, Content)
+        end
+        
+        return appendfile(FileName, Content)
+    end
+
+    rconsoleprint(Content)
+end
+
 local function Log(Arguments)
     for i, v in next, Arguments do
         if type(v) == "string" then
@@ -71,10 +84,10 @@ local function Log(Arguments)
     end
 
     if Arguments.Response then
-        return rconsolewarn(("\nWhat: %s\nMethod: %s\n%s Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s"):format(Arguments.What, Arguments.Method, Arguments.Method == "OnClientInvoke" and "To" or "From", Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Response, Arguments.Info))
+        return Save(("\nWhat: %s\nMethod: %s\n%s Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s"):format(Arguments.What, Arguments.Method, Arguments.Method == "OnClientInvoke" and "To" or "From", Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Response, Arguments.Info))
     end
 
-    rconsolewarn(("\nWhat: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s"):format(Arguments.What, Arguments.Method, Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Info))
+    Save(("\nWhat: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s"):format(Arguments.What, Arguments.Method, Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Info))
 end
 
 local function ArgGuard(self, ...)
