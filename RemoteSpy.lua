@@ -17,7 +17,7 @@ local Methods = {
     RemoteEvent = "FireServer",
     RemoteFunction = "InvokeServer"
 }
-local FileName = ("RemoteSpy Logs [%s_%s]"):format(game.PlaceId, game.PlaceVersion)
+local FileName, FileType = ("RemoteSpy Logs [%s_%s]"):format(game.PlaceId, game.PlaceVersion), "luau"
 local GetFullName = game.GetFullName
 local isexecutorfunction = isexecutorfunction or is_synapse_function or isexecutorclosure or isourclosure or function(f) return getinfo(f, "s").source:find("@") and true or false end
 local hookmetamethod = hookmetamethod or newcclosure(function(Object, Metamethod, Function)
@@ -76,10 +76,10 @@ end
 local function Save(Content)
     if WriteToFile then
         if not isfile(FileName) then
-            return writefile(FileName, Content)
+            return writefile(FileName..FileType, Content)
         end
         
-        return appendfile(FileName, Content)
+        return appendfile(FileName..FileType, Content)
     end
 
     rconsoleprint(Content)
