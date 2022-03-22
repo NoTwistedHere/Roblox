@@ -17,7 +17,7 @@ local Methods = {
     RemoteEvent = "FireServer",
     RemoteFunction = "InvokeServer"
 }
-local FileName, FileType = ("RemoteSpy Logs [%s_%s]"):format(game.PlaceId, game.PlaceVersion), "luau"
+local FileName, FileType = ("RemoteSpy Logs [%s_%s]"):format(game.PlaceId, game.PlaceVersion), ".luau"
 local GetFullName = game.GetFullName
 local isexecutorfunction = isexecutorfunction or is_synapse_function or isexecutorclosure or isourclosure or function(f) return getinfo(f, "s").source:find("@") and true or false end
 local hookmetamethod = hookmetamethod or newcclosure(function(Object, Metamethod, Function)
@@ -33,7 +33,7 @@ if not isexecutorfunction or not getinfo or not hookmetamethod then
     return;
 end
 
-if isfile(FileName) then
+if isfile(FileName..FileType) then
     local Name, Count = "", 0
 
     repeat
