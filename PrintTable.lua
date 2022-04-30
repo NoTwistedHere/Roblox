@@ -43,15 +43,15 @@ local function Unrep(String)
     return String, CountTable(Counts) > 0
 end
 
-local function ConvertCodepoints(String, Modified) --// cba to rename it
-    if String:match("[^%a%c%d%l%p%s%u%x]") then
+local function ConvertCodepoints(OriginalString, Modified) --// cba to rename it
+    if OriginalString:match("[^%a%c%d%l%p%s%u%x]") then
         local String = "utf8.char("
         
-        for i, v in utf8.codes(String) do
+        for i, v in utf8.codes(OriginalString) do
             String ..= ("%s%s"):format(i > 1 and "," or "", v)
         end
         
-        return String .. ")", Modified, "--// "..String
+        return String .. ")", Modified, "--// "..OriginalString
     end
 
     return String, Modified
