@@ -42,6 +42,10 @@ if isfile(FileName..FileType) then
     until not isfile(Name)
     
     FileName = Name
+    
+    if WriteToFile then
+        writefile(FileName..FileType, "")
+    end
 end
 
 local function Stringify(String)
@@ -76,9 +80,9 @@ end
 local function Save(Content)
     if WriteToFile then
         if not isfile(FileName..FileType) then
-            return writefile(FileName..FileType, Content)
+            writefile(FileName..FileType, Content)
         end
-        
+
         return appendfile(FileName..FileType, Content)
     end
 
