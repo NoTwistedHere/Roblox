@@ -99,10 +99,10 @@ local function Log(Arguments)
     end
 
     if Arguments.Response then
-        return Save(("\nWhat: %s\nMethod: %s\n%s Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s, Traceback: %s"):format(Arguments.What, Arguments.Method, Arguments.Method == "OnClientInvoke" and "To" or "From", Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.Traceback))
+        return Save(("\nWhat: %s\nMethod: %s\n%s Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s, Traceback: \"%s\""):format(Arguments.What, Arguments.Method, Arguments.Method == "OnClientInvoke" and "To" or "From", Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.Traceback))
     end
 
-    Save(("\nWhat: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s\nTraceback: %s"):format(Arguments.What, Arguments.Method, Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Info, Arguments.Traceback))
+    Save(("\nWhat: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s\nTraceback: \"%s\""):format(Arguments.What, Arguments.Method, Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Info, ({Arguments.Traceback:gsub(":(%d+)\10", function(Line) return Line.."\n" end))})[1])
 end
 
 local function ArgGuard(self, ...)
