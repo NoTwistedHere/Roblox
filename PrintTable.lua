@@ -43,7 +43,7 @@ local function Unrep(String)
     return String, CountTable(Counts) > 0
 end
 
-local function ConvertCodepoints(OriginalString, Modified) --// cba to rename it
+local function ConvertCodepoints(OriginalString, Modified, Extra) --// cba to rename it
     if OriginalString:match("[^%a%c%d%l%p%s%u%x]") then
         local String = "utf8.char("
         
@@ -51,18 +51,22 @@ local function ConvertCodepoints(OriginalString, Modified) --// cba to rename it
             String ..= ("%s%s"):format(i > 1 and "," or "", v)
         end
         
-        return String .. ")", Modified, " --// "..OriginalString
+        if Extra then
+            return String .. ")", Modified, " --// "..OriginalString
+        end
+
+        return String
     end
 
-    return OriginalString, Modified
+    return OriginalString, Extra and Modified or nil
 end
 
-local function Stringify(String)
+local function Stringify(String, Extra)
     if type(String) ~= "string" then
         return;
     end
     
-    return ConvertCodepoints(String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("[%c%s]", function(Char) if Char ~= " " then return "\\"..(utf8.codepoint(Char) or 0) end end))
+    return ConvertCodepoints(String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("[%c%s]", function(Char) if Char ~= " " then return "\\"..(utf8.codepoint(Char) or 0) end end), Extra)
 end
 
 local function Tostring(Object)
@@ -87,8 +91,8 @@ local function ParseObject(Object, DetailedInfo, TypeOf)
         if ObjectType == 1 then
             return Tostring(Object)
         elseif ObjectType == 2 then
-            local String, Modified, Extra = Stringify(Object)
-            return String, Modified and " [Modified]", Extra
+            local String, Modified, Extra = Stringify(Object, true)
+            return Stringify(Object)
         elseif ObjectType == 3 then
             return Stringify(Object:GetFullName())
         elseif ObjectType == 4 then
