@@ -146,7 +146,7 @@ for Name, Method in next, Methods do
 
         if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and not Ignore(...) then
             local Info, Traceback = GetCaller()
-            Method ..= " (Raw)"
+            local Method = Method.." (Raw)"
 
             if self.ClassName:match("Function") then
                 Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
