@@ -52,7 +52,7 @@ local function ConvertCodepoints(OriginalString, Modified, Extra) --// cba to re
         end
         
         if Extra then
-            return String .. ")", Modified, " --// "..OriginalString
+            return String .. ")", Modified
         end
 
         return String
@@ -107,7 +107,7 @@ local function ParseObject(Object, DetailedInfo, TypeOf)
 
     local Parsed = {_Parse()}
     local Main = Parsed[1]
-    table.remove(Parsed, 1)
+    Parsed[1] = nil
 
     return Main .. (TypeOf and (" [%s]"):format(Type) or ""), (DetailedInfo and unpack(Parsed) or "")
 end

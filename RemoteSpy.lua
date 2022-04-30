@@ -56,7 +56,7 @@ local function ConvertCodepoints(OriginalString) --// cba to rename it
             String ..= ("%s%s"):format(i > 1 and "," or "", v)
         end
         
-        return String .. ") --// "..OriginalString
+        return String .. ")"
     end
 
     return OriginalString
