@@ -49,7 +49,7 @@ if isfile(FileName..FileType) then
 end
 
 local function ConvertCodepoints(String)
-    if String:match("[^%a%c%d%l%p%s%u%x]") then
+    --[[if String:match("[^%a%c%d%l%p%s%u%x]") then
         local String = "utf8.char("
         
         for i, v in utf8.codes(String) do
@@ -59,7 +59,15 @@ local function ConvertCodepoints(String)
         return String .. ")"
     end
 
-    return ("\"%s\""):format(String)
+    return String]]
+
+    local Result = ""
+
+    for i = 1, #String do
+        Result ..= string.byte(String:sub(i, i))
+    end
+
+    return Result
 end
 
 local function Stringify(String)
