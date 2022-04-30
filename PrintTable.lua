@@ -44,25 +44,17 @@ local function Unrep(String)
 end
 
 local function ConvertCodepoints(String, Modified) --// cba to rename it
-    --[[if String:match("[^%a%c%d%l%p%s%u%x]") then
+    if String:match("[^%a%c%d%l%p%s%u%x]") then
         local String = "utf8.char("
         
         for i, v in utf8.codes(String) do
             String ..= ("%s%s"):format(i > 1 and "," or "", v)
         end
         
-        return String .. ")"
+        return String .. ")", Modified, "--// "..String
     end
 
-    return String]]
-
-    local Result = ""
-
-    for i = 1, #String do
-        Result ..= string.byte(String:sub(i, i))
-    end
-
-    return Result, Modified
+    return String, Modified, 
 end
 
 local function Stringify(String)
@@ -95,8 +87,8 @@ local function ParseObject(Object, DetailedInfo, TypeOf)
         if ObjectType == 1 then
             return Tostring(Object)
         elseif ObjectType == 2 then
-            local String, Modified, IsString = Unrep(Stringify(Object))
-            return IsString and String or ("\"%s\""):format(String), Modified and " [Modified]"
+            local String, Modified, Extra = Unrep(Stringify(Object))
+            return Extra and String or ("\"%s\""):format(String), Modified and " [Modified]", Extra
         elseif ObjectType == 3 then
             return Stringify(Object:GetFullName())
         elseif ObjectType == 4 then
@@ -111,7 +103,7 @@ local function ParseObject(Object, DetailedInfo, TypeOf)
 
     local Parsed = {_Parse()}
 
-    return Parsed[1], (DetailedInfo and Parsed[2] or "") .. (TypeOf and (" [%s]"):format(Type) or "")
+    return Parsed[1] .. (TypeOf and (" [%s]"):format(Type) or ""), (DetailedInfo and (table.remove(Parsed, 1) and unpack(Parsed or "")) or "")
 end
 
 _PrintTable = function(Table, Indents, Checked)
