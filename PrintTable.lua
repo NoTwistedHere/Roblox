@@ -54,7 +54,7 @@ local function ConvertCodepoints(String, Modified) --// cba to rename it
         return String .. ")", Modified, "--// "..String
     end
 
-    return String, Modified, 
+    return String, Modified
 end
 
 local function Stringify(String)
