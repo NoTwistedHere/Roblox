@@ -43,13 +43,26 @@ local function Unrep(String)
     return String, CountTable(Counts) > 0
 end
 
+local function ConvertCodepoints(String, Modified)
+    if String:match("[^%a%c%d%l%p%s%u%x]") then
+        local String = "utf8.char("
+        
+        for i, v in utf8.codes(String) do
+            String ..= ("%s%s"):format(i > 1 and "," or "", v)
+        end
+        
+        return String .. ")", Modified, true
+    end
+
+    return ("\"%s\""):format(String), Modified
+end
+
 local function Stringify(String)
     if type(String) ~= "string" then
         return;
     end
-
-    local NewString = String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("[%c%s]", function(Char) if Char ~= " " then return "\\"..(utf8.codepoint(Char) or 0) end end)
-    return NewString
+    
+    return ConvertCodepoints(String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("[%c%s]", function(Char) if Char ~= " " then return "\\"..(utf8.codepoint(Char) or 0) end end))
 end
 
 local function Tostring(Object)
@@ -74,8 +87,8 @@ local function ParseObject(Object, DetailedInfo, TypeOf)
         if ObjectType == 1 then
             return Tostring(Object)
         elseif ObjectType == 2 then
-            local String, Modified = Unrep(Stringify(Object))
-            return ("\"%s\""):format(String), Modified and " [Modified]"
+            local String, Modified, IsString = Unrep(Stringify(Object))
+            return IsString and String or ("\"%s\""):format(String), Modified and " [Modified]"
         elseif ObjectType == 3 then
             return Stringify(Object:GetFullName())
         elseif ObjectType == 4 then

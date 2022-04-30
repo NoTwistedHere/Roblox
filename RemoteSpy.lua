@@ -48,12 +48,26 @@ if isfile(FileName..FileType) then
     end
 end
 
+local function ConvertCodepoints(String)
+    if String:match("[^%a%c%d%l%p%s%u%x]") then
+        local String = "utf8.char("
+        
+        for i, v in utf8.codes(String) do
+            String ..= ("%s%s"):format(i > 1 and "," or "", v)
+        end
+        
+        return String .. ")"
+    end
+
+    return ("\"%s\""):format(String)
+end
+
 local function Stringify(String)
     if type(String) ~= "string" then
         return;
     end
     
-    return String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("[%c%s]", function(Char) if Char ~= " " then return "\\"..(utf8.codepoint(Char) or 0) end end)
+    return ConvertCodepoints(String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("[%c%s]", function(Char) if Char ~= " " then return "\\"..(utf8.codepoint(Char) or 0) end end))
 end
 
 local function TrueString(String)
