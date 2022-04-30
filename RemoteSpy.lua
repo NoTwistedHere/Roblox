@@ -75,7 +75,7 @@ end
 
 local function Save(Content)
     if WriteToFile then
-        if not isfile(FileName) then
+        if not isfile(FileName..FileType) then
             return writefile(FileName..FileType, Content)
         end
         
