@@ -39,7 +39,7 @@ if isfile(FileName..FileType) then
     repeat
         Count += 1
         Name = FileName..(" (%d)"):format(Count)
-    until not isfile(Name)
+    until not isfile(Name..FileType)
     
     FileName = Name
     
@@ -48,18 +48,18 @@ if isfile(FileName..FileType) then
     end
 end
 
-local function ConvertCodepoints(String)
-    if String:match("[^%a%c%d%l%p%s%u%x]") then
+local function ConvertCodepoints(OriginalString) --// cba to rename it
+    if OriginalString:match("[^%a%c%d%l%p%s%u%x]") then
         local String = "utf8.char("
         
-        for i, v in utf8.codes(String) do
+        for i, v in utf8.codes(OriginalString) do
             String ..= ("%s%s"):format(i > 1 and "," or "", v)
         end
         
-        return String .. ") --// ".. String
+        return String .. ") --// "..OriginalString
     end
 
-    return String
+    return OriginalString
 end
 
 local function Stringify(String)
