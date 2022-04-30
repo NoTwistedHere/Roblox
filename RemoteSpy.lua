@@ -99,10 +99,10 @@ local function Log(Arguments)
     end
 
     if Arguments.Response then
-        return Save(("\nWhat: %s\nMethod: %s\n%s Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s, Traceback: \"%s\""):format(Arguments.What, Arguments.Method, Arguments.Method == "OnClientInvoke" and "To" or "From", Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.Traceback))
+        return Save(("\nWhat: %s\nMethod: %s\n%s Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s\nFunctionInfo: %s\n Traceback: %s"):format(Arguments.What, Arguments.Method, Arguments.Method == "OnClientInvoke" and "To" or "From", Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.FunctionInfo, Arguments.Traceback))
     end
 
-    Save(("\nWhat: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s\nTraceback: \"%s\""):format(Arguments.What, Arguments.Method, Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Info, ({Arguments.Traceback:gsub(":(%d+)\10", function(Line) return Line.."\n" end))})[1])
+    Save(("\nWhat: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s\nTraceback: %s"):format(Arguments.What, Arguments.Method, Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Info, Arguments.Traceback))
 end
 
 local function ArgGuard(self, ...)
@@ -120,16 +120,18 @@ local function ArgGuard(self, ...)
 end
 
 local function GetCaller()
+    local Traceback, FirstInfo = {};
     for i = 1, 16380 do
         local Info = getinfo(i)
 
         if not Info then
-            return getinfo(i - 1)
+            return FirstInfo, Traceback
         elseif Info.what == "C" or isexecutorfunction(Info.func) then
             continue;
         end
 
-        return Info
+        table.insert(Traceback, ("%s:%d"):format(Stringify(Info.short_src), Info.currentline))
+        FirstInfo = FirstInfo or Info
     end
 end
 
@@ -141,22 +143,15 @@ for Name, Method in next, Methods do
     local Original; Original = hookfunction(Instance.new(Name)[Method], function(...)
         local self, Arguments = SortArguments(...)
         local Response = "Disabled" --{pcall(Original, ...)}
-        local Info = GetCaller()
-        local Traceback = debug.traceback()
 
-        --[[if not table.remove(Response, 1) then
-            return unpack(Response)
-        end]]
-
-        task.spawn(function(...)
-            if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and not Ignore(...) then
-                if self.ClassName:match("Function") then
-                    Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
-                else
-                    Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Traceback = Traceback})
-                end
+        if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and not Ignore(...) then
+            local Info, Traceback = GetCaller()
+            if self.ClassName:match("Function") then
+                Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
+            else
+                Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Traceback = Traceback})
             end
-        end, ...)
+        end
 
         return Original(...) --unpack(Response)
     end)
@@ -164,24 +159,17 @@ end
 
 local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...)
     local self, Arguments = SortArguments(...)
-    local Method, Traceback = getnamecallmethod(), debug.traceback()
+    local Method = getnamecallmethod()
     local Response = "Disabled" --{pcall(OldNamecall, ...)}
-
-    --[[if not table.remove(Response, 1) then
-        return unpack(Response)
-    end]]
     
-    task.spawn(function(...)
-        if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] == Method and not Ignore(...) then
-            local Info = GetCaller()
-
-            if self.ClassName:match("Function") then
-                Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
-            else
-                Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Traceback = Traceback})
-            end
+    if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] == Method and not Ignore(...) then
+        local Info, Traceback = GetCaller()
+        if self.ClassName:match("Function") then
+            Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
+        else
+            Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Traceback = Traceback})
         end
-    end, ...)
+    end
 
     return OldNamecall(...) --unpack(Response)
 end)
@@ -192,7 +180,8 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...
     if self:IsA("RemoteFunction") and TrueString(Arguments[1]) == "OnClientInvoke" and type(Arguments[2]) == "function" and islclosure(Arguments[2]) and not (islclosure(Function) and #getupvalues(Function) == 0 and #getconstants(Function) == 1 and typeof(getconstant(Function, 1)) == "userdata") then
         local Name, ClassName = self.ClassName, Stringify(GetFullName(self))
         local Function = Arguments[2]
-        local Info, Traceback = getinfo(Function), debug.traceback()
+        local FunctionInfo = getinfo(Function)
+        local Info, Traceback = GetCaller()
         local Old;
 
         local function DoOtherFunction(...)
@@ -200,7 +189,7 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...
             local Response = {Old(...)}
 
             if not getinfo(3) and RemoteSpyEnabled and Enabled[ClassName] and not Ignore(...) then
-                Log({What = Name, Method = "ClientInvoke", Script = Stringify(Info.short_src), Timestamp = Timestamp(), Arguments = InvokedArguments, Info = Info, Response = Response, Traceback = Traceback})
+                Log({What = Name, Method = "ClientInvoke", Script = Stringify(Info.short_src), Timestamp = Timestamp(), Arguments = InvokedArguments, FunctionInfo = FunctionInfo, Info = Info, Response = Response, Traceback = Traceback})
             end
 
             return unpack(Response)
