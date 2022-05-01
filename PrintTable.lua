@@ -45,6 +45,14 @@ end
 
 local function ConvertCodepoints(OriginalString, Modified, Extra) --// cba to rename it
     if OriginalString:match("[^%a%c%d%l%p%s%u%x]") then
+        if not pcall(utf8.codes, OriginalString) then
+            local String = ""
+            for i = 1, #OriginalString do
+                String ..= "\\" .. string.byte(OriginalString, i, i)
+            end
+
+            return String, Extra and Modified or nil
+        end
         local String = "utf8.char("
         
         for i, v in utf8.codes(OriginalString) do
@@ -55,7 +63,7 @@ local function ConvertCodepoints(OriginalString, Modified, Extra) --// cba to re
             return String .. ")", Modified
         end
 
-        return String
+        return String ..")"
     end
 
     return OriginalString, Extra and Modified or nil
