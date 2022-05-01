@@ -54,17 +54,17 @@ local function ConvertCodepoints(OriginalString, Modified, Extra) --// cba to re
                 String ..= "\\" .. string.byte(OriginalString, i, i)
             end
 
-            return String, Extra and Modified or nil
+            return String, Extra and true or false
         end
         
         if Extra then
-            return Utf8String .. ")", Modified
+            return Utf8String .. ")", true
         end
 
         return Utf8String ..")"
     end
 
-    return OriginalString, Extra and Modified or nil
+    return "\""..OriginalString.."\"", Extra and Modified > 0 or nil
 end
 
 local function Stringify(String, Extra)
@@ -97,15 +97,15 @@ local function ParseObject(Object, DetailedInfo, TypeOf)
         if ObjectType == 1 then
             return Tostring(Object)
         elseif ObjectType == 2 then
-            local String, Modified, Extra = Stringify(Object, true)
-            return Stringify(Object)
+            local String, Modified = Stringify(Object, true)
+            return Stringify(Object), Modified
         elseif ObjectType == 3 then
             return Stringify(Object:GetFullName())
         elseif ObjectType == 4 then
             return Tostring(Object), getrawmetatable(Object) and " [Metatable]"
         elseif ObjectType == 5 then
             local Info = getinfo(Object)
-            return ("%s"):format(tostring(Object)), ("source: %s, what: %s, name: \"%s\" (currentline: %s, numparams: %s, nups: %s, is_vararg: %s)"):format(Stringify(Info.source), Info.what, Stringify(Info.name), Info.currentline, Info.numparams, Info.nups, Info.is_vararg)
+            return ("%s"):format(tostring(Object)), ("source: %s, what: %s, name: %s (currentline: %s, numparams: %s, nups: %s, is_vararg: %s)"):format(Stringify(Info.source), Info.what, Stringify(Info.name), Info.currentline, Info.numparams, Info.nups, Info.is_vararg)
         else
             return Tostring(Object)
         end
