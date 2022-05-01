@@ -112,9 +112,8 @@ local function ParseObject(Object, DetailedInfo, TypeOf)
     end
 
     local Parsed = {_Parse()}
-    local Main = Parsed[1]
 
-    return Main, (TypeOf and (" [%s]"):format(Parsed[1]) or "") .. (DetailedInfo and unpack(Parsed, 2) or "")
+    return Parsed[1], (TypeOf and (" [%s]"):format(Type) or "") .. (DetailedInfo and unpack(Parsed, 2) or "")
 end
 
 _PrintTable = function(Table, Indents, Checked)
