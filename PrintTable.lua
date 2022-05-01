@@ -72,21 +72,22 @@ local function Stringify(String, Extra)
         return;
     end
     
-    return ConvertCodepoints(String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end):gsub("[%c%s]", function(Char) if Char ~= " " then return "\\"..(utf8.codepoint(Char) or 0) end end), Extra)
+    return ConvertCodepoints(String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end), Extra)
 end
 
 local function Tostring(Object)
     local Metatable = getrawmetatable(Object)
-    local Response;
 
     if Metatable and not isreadonly(Metatable) and rawget(Metatable, "__tostring") then
         local Old = rawget(Metatable, "__tostring")
         rawset(Metatable, "__tostring", nil)
-        Response = tostring(Object)
+        local Response = tostring(Object)
         rawset(Metatable, "__tostring", Old)
+
+        return Response, " [Metatable]"
     end
 
-    return Response or tostring(Object)
+    return tostring(Object)
 end
 
 local function ParseObject(Object, DetailedInfo, TypeOf)
@@ -94,15 +95,11 @@ local function ParseObject(Object, DetailedInfo, TypeOf)
     local ObjectType = ObjectTypes[Type]
     
     local function _Parse()
-        if ObjectType == 1 then
-            return Tostring(Object)
         elseif ObjectType == 2 then
             local String, Modified = Stringify(Object, true)
             return Stringify(Object), Modified
         elseif ObjectType == 3 then
             return Stringify(Object:GetFullName())
-        elseif ObjectType == 4 then
-            return Tostring(Object), getrawmetatable(Object) and " [Metatable]"
         elseif ObjectType == 5 then
             local Info = getinfo(Object)
             return ("%s"):format(tostring(Object)), (" source: %s, what: %s, name: %s (currentline: %s, numparams: %s, nups: %s, is_vararg: %s)"):format(Stringify(Info.source), Info.what, Stringify(Info.name), Info.currentline, Info.numparams, Info.nups, Info.is_vararg)
