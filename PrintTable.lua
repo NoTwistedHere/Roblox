@@ -78,7 +78,7 @@ end
 local function Tostring(Object)
     local Metatable = getrawmetatable(Object)
 
-    if Metatable and not isreadonly(Metatable) and rawget(Metatable, "__tostring") then
+    if Metatable and rawget(Metatable, "__tostring") then
         local Old = rawget(Metatable, "__tostring")
         rawset(Metatable, "__tostring", nil)
         local Response = tostring(Object)
@@ -95,7 +95,7 @@ local function ParseObject(Object, DetailedInfo, TypeOf)
     local ObjectType = ObjectTypes[Type]
     
     local function _Parse()
-        elseif ObjectType == 2 then
+        if ObjectType == 2 then
             local String, Modified = Stringify(Object, true)
             return Stringify(Object), Modified
         elseif ObjectType == 3 then
