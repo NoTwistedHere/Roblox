@@ -47,7 +47,7 @@ local function ConvertCodepoints(OriginalString, Modified, Extra) --// cba to re
     if OriginalString:match("[^%a%c%d%l%p%s%u%x]") then
         local Utf8String = "utf8.char("
 
-        if not pcall(function() for i, v in utf8.codes(OriginalString) do Utf8String ..= ("%s%s"):format(i > 1 and "," or "", v) end end) then
+        if not pcall(function() for i, v in utf8.codes(OriginalString) do Utf8String ..= ("%s%s"):format(i > 1 and ", " or "", v) end end) then
             local String = ""
 
             for i = 1, #OriginalString do
