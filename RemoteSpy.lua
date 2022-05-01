@@ -50,25 +50,22 @@ end
 
 local function ConvertCodepoints(OriginalString) --// cba to rename it
     if OriginalString:match("[^%a%c%d%l%p%s%u%x]") then
-        if not pcall(utf8.codes, OriginalString) then
+        local Utf8String = "utf8.char("
+
+        if not pcall(function() for i, v in utf8.codes(OriginalString) do Utf8String ..= ("%s%s"):format(i > 1 and ", " or "", v) end end) then
             local String = ""
+
             for i = 1, #OriginalString do
                 String ..= "\\" .. string.byte(OriginalString, i, i)
             end
 
-            return String
-        end
-        
-        local String = "utf8.char("
-        
-        for i, v in utf8.codes(OriginalString) do
-            String ..= ("%s%s"):format(i > 1 and "," or "", v)
+            return "\""..String.."\""
         end
 
-        return String ..")"
+        return Utf8String ..")"
     end
 
-    return OriginalString
+    return "\""..OriginalString.."\""
 end
 
 local function Stringify(String)
