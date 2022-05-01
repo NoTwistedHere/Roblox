@@ -113,9 +113,8 @@ local function ParseObject(Object, DetailedInfo, TypeOf)
 
     local Parsed = {_Parse()}
     local Main = Parsed[1]
-    Parsed[1] = nil
 
-    return Main, (TypeOf and (" [%s]"):format(Type) or "") .. (DetailedInfo and unpack(Parsed) or "")
+    return Main, (TypeOf and (" [%s]"):format(Parsed[1]) or "") .. (DetailedInfo and unpack(Parsed, 2) or "")
 end
 
 _PrintTable = function(Table, Indents, Checked)
@@ -130,7 +129,7 @@ _PrintTable = function(Table, Indents, Checked)
         local IsValid = type(v) == "table" and not Checked[v]
         local Parsed = {ParseObject(v, true, true)}
         local Value = IsValid and _PrintTable(v, Indents + 1, Checked) or Parsed[1]
-        local Comment = IsValid and Parsed[2] and " "..Parsed[2] or "" --(IsValid and (" %s"):format(Parsed[1]) or "") .. (Parsed[2] or "")
+        local Comment = (IsValid and (" %s"):format(Parsed[1]) or "") .. (Parsed[2] and " "..Parsed[2] or "") --(IsValid and (" %s"):format(Parsed[1]) or "") .. (Parsed[2] or "")
 
         Result ..= ("%s[%s] = %s%s%s\n"):format(string.rep(TabWidth, Indents), ParseObject(i), Value, Count < TableCount and "," or "", #Comment > 0 and " --//" .. Comment or "")
         Count += 1
