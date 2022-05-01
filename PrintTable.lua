@@ -43,7 +43,17 @@ local function Unrep(String)
     return String, CountTable(Counts) > 0
 end
 
-local function ConvertCodepoints(OriginalString, Modified, Extra) --// cba to rename it
+local function AntiRep(String, ...) --// I'm too lazy
+    local Unicode = String:gsub("[^%a%c%d%l%p%s%u%x]", "")
+
+    if #Unicode > 2e3 then
+        return Unicode, ...
+    end
+
+    return String, ...
+end
+
+local function ConvertCodepoints(OriginalString, Modified, Extra)
     if OriginalString:match("[^%a%c%d%l%p%s%u%x]") then
         local Utf8String = "utf8.char("
 
@@ -72,7 +82,7 @@ local function Stringify(String, Extra)
         return;
     end
     
-    return ConvertCodepoints(String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end), Extra)
+    return ConvertCodepoints(AntiRep(String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end), Extra))
 end
 
 local function Tostring(Object)
@@ -127,7 +137,7 @@ _PrintTable = function(Table, Indents, Checked)
         local IsValid = type(v) == "table" and not Checked[v]
         local Parsed = {ParseObject(v, true, true)}
         local Value = IsValid and _PrintTable(v, Indents + 1, Checked) or Parsed[1]
-        local Comment = (IsValid and (" %s"):format(Parsed[1]) or "") .. (Parsed[2] and " "..Parsed[2] or "") --(IsValid and (" %s"):format(Parsed[1]) or "") .. (Parsed[2] or "")
+        local Comment = (IsValid and Parsed[1] or "") .. (Parsed[2] and " "..Parsed[2] or "") --(IsValid and (" %s"):format(Parsed[1]) or "") .. (Parsed[2] or "")
 
         Result ..= ("%s[%s] = %s%s%s\n"):format(string.rep(TabWidth, Indents), ParseObject(i), Value, Count < TableCount and "," or "", #Comment > 0 and " --//" .. Comment or "")
         Count += 1
