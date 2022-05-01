@@ -79,10 +79,12 @@ local function Tostring(Object)
     local Metatable = getrawmetatable(Object)
 
     if Metatable and rawget(Metatable, "__tostring") then
-        local Old = rawget(Metatable, "__tostring")
+        local Old, IsReadOnly = rawget(Metatable, "__tostring"), isreadonly(Metatable)
+        setreadonly(Metatable, false)
         rawset(Metatable, "__tostring", nil)
         local Response = tostring(Object)
         rawset(Metatable, "__tostring", Old)
+        setreadonly(Metatable, IsReadOnly)
 
         return Response, " [Metatable]"
     end
