@@ -133,11 +133,13 @@ _PrintTable = function(Table, Indents, Checked)
     Indents = Indents or 1
     Checked[Table] = true
 
-    for i,v in next, Table do
+    --Sort(Table)
+
+    for i,v in pairs(Table) do
         local IsValid = type(v) == "table" and not Checked[v]
         local Parsed = {ParseObject(v, true, true)}
         local Value = IsValid and _PrintTable(v, Indents + 1, Checked) or Parsed[1]
-        local Comment = (IsValid and Parsed[1] or "") .. (Parsed[2] and " "..Parsed[2] or "") --(IsValid and (" %s"):format(Parsed[1]) or "") .. (Parsed[2] or "")
+        local Comment = (IsValid and Parsed[1]..(Parsed[2] and " " or "") or "") .. (Parsed[2] and ""..Parsed[2] or "") --(IsValid and (" %s"):format(Parsed[1]) or "") .. (Parsed[2] or "")
 
         Result ..= ("%s[%s] = %s%s%s\n"):format(string.rep(TabWidth, Indents), ParseObject(i), Value, Count < TableCount and "," or "", #Comment > 0 and " --//" .. Comment or "")
         Count += 1

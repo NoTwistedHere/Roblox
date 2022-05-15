@@ -17,7 +17,7 @@ local Methods = {
     RemoteEvent = "FireServer",
     RemoteFunction = "InvokeServer"
 }
-local FileName, FileType = ("RemoteSpy Logs [%s_%s]"):format(game.PlaceId, game.PlaceVersion), ".luau"
+local Directory, FileName, FileType = "RemoteSpyLogs/", ("RemoteSpy Logs [%s_%s]"):format(game.PlaceId, game.PlaceVersion), ".luau"
 local GetFullName = game.GetFullName
 local isexecutorfunction = isexecutorfunction or is_synapse_function or isexecutorclosure or isourclosure or function(f) return getinfo(f, "s").source:find("@") and true or false end
 local hookmetamethod = hookmetamethod or newcclosure(function(Object, Metamethod, Function)
@@ -33,18 +33,22 @@ if not isexecutorfunction or not getinfo or not hookmetamethod then
     return;
 end
 
+if not isfolder(Directory) then
+    makefolder(Directory)
+end
+
 if isfile(FileName..FileType) then
     local Name, Count = "", 0
 
     repeat
         Count += 1
         Name = FileName..(" (%d)"):format(Count)
-    until not isfile(Name..FileType)
+    until not isfile(Directory..Name..FileType)
     
     FileName = Name
     
     if WriteToFile then
-        writefile(FileName..FileType, "")
+        writefile(Directory..FileName..FileType, "")
     end
 end
 
@@ -99,11 +103,11 @@ end
 
 local function Save(Content)
     if WriteToFile then
-        if not isfile(FileName..FileType) then
-            writefile(FileName..FileType, Content)
+        if not isfile(Directory..FileName..FileType) then
+            writefile(Directory..FileName..FileType, Content)
         end
 
-        return appendfile(FileName..FileType, Content)
+        return appendfile(Directory..FileName..FileType, Content)
     end
 
     rconsoleprint(Content)
@@ -118,8 +122,10 @@ local function Log(Arguments)
         end
     end
 
-    if Arguments.Response then
-        return Save(("\nWhat: %s\nMethod: %s\n%s Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s\nFunctionInfo: %s\n Traceback: %s"):format(Arguments.What, Arguments.Method, Arguments.Method == "OnClientInvoke" and "To" or "From", Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.FunctionInfo, Arguments.Traceback))
+    if Arguments.FunctionInfo then
+        return Save(("\nWhat: %s\nMethod: %s\nTo Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s\nFunctionInfo: %s\nTraceback: %s"):format(Arguments.What, Arguments.Method, Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.FunctionInfo, Arguments.Traceback))
+    elseif Arguments.Response then
+        return Save(("\nWhat: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s\nTraceback: %s"):format(Arguments.What, Arguments.Method, Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.Traceback))
     end
 
     Save(("\nWhat: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s\nTraceback: %s"):format(Arguments.What, Arguments.Method, Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Info, Arguments.Traceback))
@@ -145,13 +151,14 @@ local function GetCaller()
         local Info = getinfo(i)
 
         if not Info then
-            return FirstInfo, Traceback
-        elseif Info.what == "C" or isexecutorfunction(Info.func) then
-            continue;
+            return FirstInfo or getinfo(i - 1), Traceback
         end
 
-        table.insert(Traceback, ("%s:%d"):format(Stringify(Info.short_src), Info.currentline))
-        FirstInfo = FirstInfo or Info
+        table.insert(Traceback, ("%s:%d"):format(Info.short_src, Info.currentline))
+
+        if Info.what ~= "C" and not isexecutorfunction(Info.func) and not FirstInfo then
+            FirstInfo = Info
+        end
     end
 end
 
@@ -162,17 +169,29 @@ end
 for Name, Method in next, Methods do
     local Original; Original = hookfunction(Instance.new(Name)[Method], function(...)
         local self, Arguments = SortArguments(...)
-        local Response = "Disabled" --{pcall(Original, ...)}
 
         if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and not Ignore(...) then
+            local Thread = coroutine.running()
             local Info, Traceback = GetCaller()
             local Method = Method.." (Raw)"
 
-            if self.ClassName:match("Function") then
-                Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
-            else
-                Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Traceback = Traceback})
-            end
+            task.spawn(function(...)
+                local Success, Response = SortArguments(pcall(Original, ...))
+
+                if not Success then
+                    return coroutine.resume(Thread, unpack(Response))
+                end
+    
+                if self.ClassName:match("Function") then
+                    Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
+                else
+                    Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Traceback = Traceback})
+                end
+    
+                coroutine.resume(Thread, unpack(Response))
+            end, ...)
+    
+            return coroutine.yield()
         end
 
         return Original(...) --unpack(Response)
@@ -182,43 +201,83 @@ end
 local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...)
     local self, Arguments = SortArguments(...)
     local Method = getnamecallmethod()
-    local Response = "Disabled" --{pcall(OldNamecall, ...)}
     
-    if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] == Method and not Ignore(...) then
+    if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and Methods[self.ClassName] == Method and not Ignore(...) then
+        local Thread = coroutine.running()
         local Info, Traceback = GetCaller()
-        if self.ClassName:match("Function") then
-            Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
-        else
-            Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Traceback = Traceback})
-        end
+
+        task.spawn(function(...)
+            setnamecallmethod(Method)
+            local Success, Response = SortArguments(pcall(OldNamecall, ...))
+
+            repeat
+                task.wait()
+            until coroutine.status(Thread) == "suspended"
+
+            if not Success then
+                return coroutine.resume(Thread, unpack(Response))
+            end
+
+            if self.ClassName:match("Function") then
+                Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
+            else
+                Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Traceback = Traceback})
+            end
+
+            coroutine.resume(Thread, unpack(Response))
+        end, ...)
+
+        return coroutine.yield()
     end
 
     return OldNamecall(...) --unpack(Response)
 end)
 
+local function SafeCall(Function, ...)
+    local Old, Success, Response = syn.get_thread_identity();
+
+    syn.set_thread_identity(2)
+    Success, Response = SortArguments({pcall(Function, ...)})
+    syn.set_thread_identity(Old)
+
+    return Success, Response
+end
+
 local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...)
     local self, Arguments = SortArguments(...)
 
-    if self:IsA("RemoteFunction") and TrueString(Arguments[1]) == "OnClientInvoke" and type(Arguments[2]) == "function" and islclosure(Arguments[2]) and not (islclosure(Function) and #getupvalues(Function) == 0 and #getconstants(Function) == 1 and typeof(getconstant(Function, 1)) == "userdata") then
-        local Name, ClassName = self.ClassName, Stringify(GetFullName(self))
+    if self:IsA("RemoteFunction") and TrueString(Arguments[1]) == "OnClientInvoke" and type(Arguments[2]) == "function" then
+        local Name, ClassName = GetFullName(self), self.ClassName
         local Function = Arguments[2]
         local FunctionInfo = getinfo(Function)
         local Info, Traceback = GetCaller()
-        local Old;
 
-        local function DoOtherFunction(...)
-            local InvokedArguments = {...}
-            local Response = {Old(...)}
+        warn(true, 1)
 
-            if not getinfo(3) and RemoteSpyEnabled and Enabled[ClassName] and not Ignore(...) then
-                Log({What = Name, Method = "ClientInvoke", Script = Stringify(Info.short_src), Timestamp = Timestamp(), Arguments = InvokedArguments, FunctionInfo = FunctionInfo, Info = Info, Response = Response, Traceback = Traceback})
-            end
+        return OldNewIndex(self, "OnClientInvoke", function(...)
+            local Thread = coroutine.running()
 
-            return unpack(Response)
-        end
+            warn(true, 2)
+            
+            task.spawn(function(...)
+                local Success, Response = SafeCall(Function, ...)
 
-        Old = hookfunction(Function, function(...)
-            return DoOtherFunction(self, ...)
+                repeat
+                    task.wait()
+                until coroutine.status(Thread) == "suspended"
+
+                warn(Succeess, Response)
+    
+                --[[if not Success then --// Commented out because I know of an easy way to bypass, but feel free to enable it if you wish
+                    return coroutine.resume(Thread, unpack(Response))
+                end]]
+                
+                Log({What = Name, Method = "InvokeClient", Script = Info.short_src, Timestamp = Timestamp(), Arguments = {...}, FunctionInfo = FunctionInfo, Info = Info, Response = not Success and "Script Error: "..Response or Response, Traceback = Traceback})
+                
+                coroutine.resume(Thread, unpack(Response))
+            end, ...)
+
+            return coroutine.yield()
         end)
     end
 
