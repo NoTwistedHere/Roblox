@@ -61,10 +61,15 @@ local function ConvertCodepoints(OriginalString, Modified, Extra)
             local String = ""
 
             for i = 1, #OriginalString do
+                if string.byte(OriginalString, i, i) <= 126 then
+                    String ..= string.sub(OriginalString, i, i)
+                    continue;
+                end
+
                 String ..= "\\" .. string.byte(OriginalString, i, i)
             end
 
-            return String, Extra and true or false
+            return "\"" .. String .. "\"", Extra and true or false
         end
         
         if Extra then
