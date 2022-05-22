@@ -54,7 +54,6 @@ local function AntiRep(String, ...) --// I'm too lazy
 end
 
 local function ConvertCodepoints(OriginalString, Modified, Extra)
-    
     if OriginalString:match("[^%a%c%d%l%p%s%u%x]") then
         local Utf8String = "utf8.char("
 
@@ -62,12 +61,13 @@ local function ConvertCodepoints(OriginalString, Modified, Extra)
             local String = ""
 
             for i = 1, #OriginalString do
-                if string.byte(OriginalString, i, i) <= 126 then
-                    String ..= string.sub(OriginalString, i, i)
+                local Byte = string.byte(OriginalString, i, i)
+                if Byte <= 126 and Byte >= 33 then
+                    String ..= Byte
                     continue;
                 end
 
-                String ..= "\\" .. string.byte(OriginalString, i, i)
+                String ..= "\\" .. Byte
             end
 
             return "\"" .. String .. "\"", Extra and true or false
