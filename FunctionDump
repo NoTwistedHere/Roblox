@@ -22,7 +22,6 @@ table.sort(Functions, function(a, b) return a[2].currentline < b[2].currentline 
 
 for i, v in next, Functions do
     appendfile(game.PlaceId..".luau", PrintTable({Upvalues = getupvalues(v[1]), Constants = getconstants(v[1]), LocalFunctions = getprotos(v[1]), Info = v[2]}))
-    task.wait()
 end
 
 warn("done")
