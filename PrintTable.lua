@@ -54,6 +54,7 @@ local function AntiRep(String, ...) --// I'm too lazy
 end
 
 local function ConvertCodepoints(OriginalString, Modified, Extra)
+    
     if OriginalString:match("[^%a%c%d%l%p%s%u%x]") then
         local Utf8String = "utf8.char("
 
@@ -85,6 +86,8 @@ end
 local function Stringify(String, Extra)
     if type(String) ~= "string" then
         return;
+    elseif #String > 5e3 then
+        return "\"String is larger than 5e3 (Very Large)\""
     end
     
     return ConvertCodepoints(AntiRep(String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end), Extra))
