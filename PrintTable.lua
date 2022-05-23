@@ -97,15 +97,21 @@ local function Tostring(Object)
     local Metatable = getrawmetatable(Object)
 
     if Metatable and rawget(Metatable, "__tostring") then
-        local Old, IsReadOnly = rawget(Metatable, "__tostring"), isreadonly(Metatable)
-        setreadonly(Metatable, false)
-        rawset(Metatable, "__tostring", nil)
-        local Response = tostring(Object)
-        rawset(Metatable, "__tostring", Old)
-        setreadonly(Metatable, IsReadOnly)
+        local Old, IsReadOnly, Response = rawget(Metatable, "__tostring"), isreadonly(Metatable);
+
+        if islclosure(Old) then
+            setreadonly(Metatable, false)
+            rawset(Metatable, "__tostring", nil)
+            Response = tostring(Object)
+            rawset(Metatable, "__tostring", Old)
+            setreadonly(Metatable, IsReadOnly)
+        else
+            Response = tostring(Object)
+        end
 
         return Response, " [Metatable]"
     end
+
 
     return tostring(Object)
 end
@@ -123,12 +129,6 @@ local function ParseObject(Object, DetailedInfo, TypeOf)
         elseif ObjectType == 5 then
             local Info = getinfo(Object)
             return ("%s"):format(tostring(Object)), (" source: %s, what: %s, name: %s (currentline: %s, numparams: %s, nups: %s, is_vararg: %s)"):format(Stringify(Info.source), Info.what, Stringify(Info.name), Info.currentline, Info.numparams, Info.nups, Info.is_vararg)
-        elseif ObjectType == 4 then
-            local ToString = rawget(getrawmetatable(Object), "__tostring")
-
-            if ToString and not islclosure(ToString) then
-                return ToString(Object)
-            end
         else
             return Tostring(Object)
         end
