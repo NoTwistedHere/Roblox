@@ -125,7 +125,7 @@ local function ParseObject(Object, DetailedInfo, TypeOf)
             local String, Modified = Stringify(Object, true)
             return Stringify(Object), Modified
         elseif ObjectType == 3 then
-            return Stringify(Object:GetFullName()), " "..Object.ClassName
+            return Stringify(Object:GetFullName()), " ClassName: "..Object.ClassName
         elseif ObjectType == 5 then
             local Info = getinfo(Object)
             return ("%s"):format(tostring(Object)), (" source: %s, what: %s, name: %s (currentline: %s, numparams: %s, nups: %s, is_vararg: %s)"):format(Stringify(Info.source), Info.what, Stringify(Info.name), Info.currentline, Info.numparams, Info.nups, Info.is_vararg)
