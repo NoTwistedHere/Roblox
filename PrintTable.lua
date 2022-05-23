@@ -63,7 +63,7 @@ local function ConvertCodepoints(OriginalString, Modified, Extra)
             for i = 1, #OriginalString do
                 local Byte = string.byte(OriginalString, i, i)
                 if Byte <= 126 and Byte >= 33 then
-                    String ..= Byte
+                    String ..= string.char(Byte)
                     continue;
                 end
 
