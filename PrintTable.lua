@@ -123,6 +123,12 @@ local function ParseObject(Object, DetailedInfo, TypeOf)
         elseif ObjectType == 5 then
             local Info = getinfo(Object)
             return ("%s"):format(tostring(Object)), (" source: %s, what: %s, name: %s (currentline: %s, numparams: %s, nups: %s, is_vararg: %s)"):format(Stringify(Info.source), Info.what, Stringify(Info.name), Info.currentline, Info.numparams, Info.nups, Info.is_vararg)
+        elseif ObjectType == 4 then
+            local ToString = getrawmetatable(Object).__tostring
+
+            if ToString and not islclosure(ToString) then
+                return ToString(Object)
+            end
         else
             return Tostring(Object)
         end
