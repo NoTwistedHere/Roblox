@@ -34,6 +34,22 @@ if not isfolder(Global) then
     makefolder(Global)
 end
 
+function Write(Function, Checked, NoWrite)
+    local Checked, Upvalues, Constants, Protos, Info = Checked or {}, getupvalues(Function), getconstants(Function), getprotos(Function), getinfo(Function)
+
+    table.insert(Checked, Function)
+
+    for i, v in next, Protos do
+        if Checked[v] then
+            continue;
+        end
+
+        Protos[i] = Write(v, Checked, true)
+    end
+
+    return {Upvalues = Upvalues, Constants = Constants, LocalFunctions = Protos, Info = Info}
+end
+
 getgenv().DumpScript = function(Source)
     local Functions = {}
     local Final = Global..Local..Stringify(Source)..".lua"
@@ -42,17 +58,20 @@ getgenv().DumpScript = function(Source)
         makefolder(Global..Local)
     end
 
+    writefile(Final, "")
+
     for i, v in next, getgc() do
         local Info = type(v) == "function" and getinfo(v)
-        if Info and Info.short_src == Source then
+
+        if Info and Info.source == Source then
             table.insert(Functions, {v, Info})
         end
     end
 
     table.sort(Functions, function(a, b) return a[2].currentline < b[2].currentline end)
 
-    for i, v in next, Functions do
-        appendfile(Final, PrintTable({Upvalues = getupvalues(v[1]), Constants = getconstants(v[1]), LocalFunctions = getprotos(v[1]), Info = v[2]}))
+    for _, Data in next, Functions do
+        appendfile(File, PrintTable(Write(Data[1])))
     end
 
     rconsolewarn("Finished")
@@ -68,6 +87,7 @@ getgenv().DumpScripts = function()
 
     for i, v in next, getgc() do
         local Info = type(v) == "function" and islclosure(v) and not is_synapse_function(v) and getinfo(v)
+
         if Info then
             Info.short_src = Stringify(Info.short_src)
 
@@ -86,8 +106,7 @@ getgenv().DumpScripts = function()
         writefile(Final, "")
 
         for _, Data in next, Dump do
-            local Function, Info = Data[1], Data[2]
-            appendfile(Final, PrintTable({Upvalues = getupvalues(Function), Constants = getconstants(Function), LocalFunctions = getprotos(Function), Info = Info}))
+            appendfile(Final, PrintTable(Write(Data[1])))
         end
     end
 
