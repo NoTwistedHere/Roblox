@@ -6,16 +6,17 @@ end
 
 getgenv().RemoteSpyEnabled = true
 getgenv().Enabled = {
-    BindableEvent = false,
-    BindableFunction = false,
-    RemoteEvent = true,
-    RemoteFunction = true,
+    BindableEvent = false;
+    BindableFunction = false;
+    RemoteEvent = true;
+    RemoteFunction = true;
+    OnClientInvoke = true;
 }
 local Methods = {
-    BindableEvent = "Fire",
-    BindableFunction = "Invoke",
-    RemoteEvent = "FireServer",
-    RemoteFunction = "InvokeServer"
+    BindableEvent = "Fire";
+    BindableFunction = "Invoke";
+    RemoteEvent = "FireServer";
+    RemoteFunction = "InvokeServer";
 }
 local Directory, FileName, FileType = "RemoteSpyLogs/", ("RemoteSpy Logs [%s_%s]"):format(game.PlaceId, game.PlaceVersion), ".luau"
 local GetFullName = game.GetFullName
@@ -123,12 +124,12 @@ local function Log(Arguments)
     end
 
     if Arguments.FunctionInfo then
-        return Save(("\nWhat: %s\nMethod: %s\nTo Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s\nFunctionInfo: %s\nTraceback: %s"):format(Arguments.What, Arguments.Method, Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.FunctionInfo, Arguments.Traceback))
+        return Save(("What: %s\nMethod: %s\nTo Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s\nFunctionInfo: %s\nTraceback: %s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.FunctionInfo, Arguments.Traceback))
     elseif Arguments.Response then
-        return Save(("\nWhat: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s\nTraceback: %s"):format(Arguments.What, Arguments.Method, Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.Traceback))
+        return Save(("What: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s\nTraceback: %s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.Traceback))
     end
 
-    Save(("\nWhat: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s\nTraceback: %s"):format(Arguments.What, Arguments.Method, Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Info, Arguments.Traceback))
+    Save(("What: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s\nTraceback: %s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Info, Arguments.Traceback))
 end
 
 local function ArgGuard(self, ...)
@@ -234,50 +235,55 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
 end)
 
 local function SafeCall(Function, ...)
-    local Old, Success, Response = syn.get_thread_identity();
+    local Old, SetFEnv, OldEnv, Success, Response = syn.get_thread_identity(), setfenv, getfenv();
 
     syn.set_thread_identity(2)
-    Success, Response = SortArguments({pcall(Function, ...)})
+    SetFEnv(getfenv(...))
+    Success, Response = SortArguments({pcall(Function, ...)}) --// you're loss ;)
+    SetFEnv(OldEnv)
     syn.set_thread_identity(Old)
 
     return Success, Response
 end
 
+local function IsValid(Parsed, Checked)
+    local Checked = Checked or {}
+
+    table.insert(Checked, Parsed)
+
+    if type(Parsed) == "function" then
+        return true
+    elseif typeof(Parsed) == "userdata" and getrawmetatable(Parsed) then
+        return IsValid(rawget(getrawmetatable(Parsed), "__call"), Checked)
+    end
+
+    return false
+end
+
 local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...)
     local self, Arguments = SortArguments(...)
+    local Method = TrueString(Arguments[1])
 
-    if self:IsA("RemoteFunction") and TrueString(Arguments[1]) == "OnClientInvoke" and type(Arguments[2]) == "function" then
+    if ArgGuard(...) and self:IsA("RemoteFunction") and Enabled["OnClientInvoke"] and (Method == "OnClientInvoke" or Method == "onClientInvoke") and pcall(IsValid, Arguments[2]) then
         local Name, ClassName = GetFullName(self), self.ClassName
         local Function = Arguments[2]
         local FunctionInfo = getinfo(Function)
         local Info, Traceback = GetCaller()
 
-        warn(true, 1)
+        warn(true, 1, PrintTable(Traceback))
 
         return OldNewIndex(self, "OnClientInvoke", function(...)
-            local Thread = coroutine.running()
-
-            warn(true, 2)
-            
-            task.spawn(function(...)
-                local Success, Response = SafeCall(Function, ...)
-
-                repeat
-                    task.wait()
-                until coroutine.status(Thread) == "suspended"
-
-                warn(Succeess, Response)
+            local Success, Response = SafeCall(Function, ...)
     
-                --[[if not Success then --// Commented out because I know of an easy way to bypass, but feel free to enable it if you wish
-                    return coroutine.resume(Thread, unpack(Response))
-                end]]
-                
-                Log({What = Name, Method = "InvokeClient", Script = Info.short_src, Timestamp = Timestamp(), Arguments = {...}, FunctionInfo = FunctionInfo, Info = Info, Response = not Success and "Script Error: "..Response or Response, Traceback = Traceback})
-                
-                coroutine.resume(Thread, unpack(Response))
-            end, ...)
+            --[[if not Success then --// Commented out because I know of an easy way to bypass, but feel free to enable it if you wish
+                return coroutine.resume(Thread, unpack(Response))
+            end]]
 
-            return coroutine.yield()
+            if RemoteSpyEnabled then
+                Log({What = Name, Method = "InvokeClient", Script = Info.short_src, Timestamp = Timestamp(), Arguments = {...}, FunctionInfo = FunctionInfo, Info = Info, Response = not Success and "Script Error: "..Response or Response, Traceback = Traceback})
+            end
+
+            return unpack(Response)
         end)
     end
 
