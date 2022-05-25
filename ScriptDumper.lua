@@ -132,12 +132,16 @@ end
 
 local function GetScripts(Table)
     for i, v in next, Table do
+        ProgressBar(i, #Table)
+
         if (not v:IsA("LocalScript") and not v:IsA("ModuleScript")) or (v:IsDescendantOf(CoreGui) or v:IsDescendantOf(CorePackages)) or table.find(Scripts, v) then
             continue;
         end
         
         table.insert(Scripts, v)
     end
+
+    rconsoleprint("\n")
 end
 
 local function DecompileScripts()
