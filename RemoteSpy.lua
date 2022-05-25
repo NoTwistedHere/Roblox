@@ -238,7 +238,7 @@ local function SafeCall(Function, ...)
     local Old, SetFEnv, OldEnv, Success, Response = syn.get_thread_identity(), setfenv, getfenv();
 
     syn.set_thread_identity(2)
-    SetFEnv(getfenv(...))
+    SetFEnv(getfenv(Function))
     Success, Response = SortArguments({pcall(Function, ...)}) --// you're loss ;)
     SetFEnv(OldEnv)
     syn.set_thread_identity(Old)
@@ -269,8 +269,6 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...
         local Function = Arguments[2]
         local FunctionInfo = getinfo(Function)
         local Info, Traceback = GetCaller()
-
-        warn(true, 1, PrintTable(Traceback))
 
         return OldNewIndex(self, "OnClientInvoke", function(...)
             local Success, Response = SafeCall(Function, ...)
