@@ -278,9 +278,7 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...
         local Info, Traceback = GetCaller()
 
         return OldNewIndex(self, "OnClientInvoke", function(...)
-            print(...)
             local Success, Response = SafeCall(Function, ...)
-            warn(Success, Response)
 
             --[[if not Success then --// Commented out because I know of an easy way to bypass, but feel free to enable it if you wish
                 return coroutine.resume(Thread, unpack(Response))
