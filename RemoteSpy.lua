@@ -29,6 +29,9 @@ local hookmetamethod = hookmetamethod or newcclosure(function(Object, Metamethod
     return hookfunction(Original, Function)
 end)
 
+local getthreadidentity = getthreadidentity or syn.get_thread_identity
+local setthreadidentity = setthreadidentity or syn.set_thread_identity
+
 if not isexecutorfunction or not getinfo or not hookmetamethod then
     game:GetService("Players").LocalPlayer:Kick("Unsupported exploit")
     return;
@@ -239,13 +242,13 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
 end)
 
 local function SafeCall(Function, ...)
-    local Old, SetFEnv, OldEnv, Success, Response = syn.get_thread_identity(), setfenv, getfenv();
+    local Old, SetFEnv, OldEnv, Success, Response = getthreadidentity(), setfenv, getfenv();
 
-    syn.set_thread_identity(2)
+    setthreadidentity(2)
     SetFEnv(getfenv(Function))
     Success, Response = SortArguments({pcall(Function, ...)}) --// you're loss ;)
     SetFEnv(OldEnv)
-    syn.set_thread_identity(Old)
+    setthreadidentity(Old)
 
     return Success, Response
 end
