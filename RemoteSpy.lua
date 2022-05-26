@@ -1,7 +1,7 @@
 --// Report any issues/detections to me
 
 if not PrintTable then
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/PrintTable.lua"))("a")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/PrintTable.luau"))()
 end
 
 getgenv().RemoteSpyEnabled = RemoteSpyEnabled or true

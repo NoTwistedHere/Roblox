@@ -18,7 +18,7 @@ Writes to `Garbage Logs/[PlaceId]/`
 
 # PrintTable
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/PrintTable.lua"))() --// Place the loadstring in your autoexec if you wish
+loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/PrintTable.luau"))() --// Place the loadstring in your autoexec if you wish
 ```
 ## <b>Example Usage:</b>
 ```lua
