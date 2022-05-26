@@ -7,7 +7,7 @@ for i, v in next, getgc() do
     end
 end
 
-if Count < 1 and #string.split(debug.traceback(), "\n") > 1 then --// Some people don't understand why I use loadstring()... idiots
+if Count == 0 then --// Some people don't understand why I use loadstring()... idiots
     local function RConsoleColour(Colour)
         rconsoleprint(("@@%s@@"):format(Colour))
     end
