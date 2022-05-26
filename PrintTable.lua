@@ -213,6 +213,7 @@ getgenv().PrintTable = newcclosure(function(Table)
 end)
 
 return function(Arg)
+    warn(a)
     if Arg ~= "a" then
         Error()
     end
