@@ -4,8 +4,8 @@ if not PrintTable then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/PrintTable.lua"))()
 end
 
-getgenv().RemoteSpyEnabled = true
-getgenv().Enabled = {
+getgenv().RemoteSpyEnabled = RemoteSpyEnabled or true
+getgenv().Enabled = Enabled or {
     BindableEvent = false;
     BindableFunction = false;
     RemoteEvent = true;
@@ -188,6 +188,10 @@ for Name, Method in next, Methods do
                 else
                     Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Traceback = Traceback})
                 end
+
+                repeat
+                    task.wait()
+                until coroutine.status(Thread) == "suspended"
     
                 coroutine.resume(Thread, unpack(Response))
             end, ...)
@@ -211,10 +215,6 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
             setnamecallmethod(Method)
             local Success, Response = SortArguments(pcall(OldNamecall, ...))
 
-            repeat
-                task.wait()
-            until coroutine.status(Thread) == "suspended"
-
             if not Success then
                 return coroutine.resume(Thread, unpack(Response))
             end
@@ -224,6 +224,10 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
             else
                 Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Traceback = Traceback})
             end
+
+            repeat
+                task.wait()
+            until coroutine.status(Thread) == "suspended"
 
             coroutine.resume(Thread, unpack(Response))
         end, ...)
@@ -260,25 +264,34 @@ local function IsValid(Parsed, Checked)
     return false
 end
 
+local function IsValidIndex(Index)
+    return Index == "OnClientInvoke" or Index == "onClientInvoke"
+end
+
 local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...)
     local self, Arguments = SortArguments(...)
-    local Method = TrueString(Arguments[1])
 
-    if ArgGuard(...) and self:IsA("RemoteFunction") and Enabled["OnClientInvoke"] and (Method == "OnClientInvoke" or Method == "onClientInvoke") and pcall(IsValid, Arguments[2]) then
+    if ArgGuard(...) and self:IsA("RemoteFunction") and IsValidIndex(TrueString(Arguments[1])) and pcall(IsValid, Arguments[2]) then
         local Name, ClassName = GetFullName(self), self.ClassName
         local Function = Arguments[2]
         local FunctionInfo = getinfo(Function)
         local Info, Traceback = GetCaller()
 
         return OldNewIndex(self, "OnClientInvoke", function(...)
+            print(...)
             local Success, Response = SafeCall(Function, ...)
-    
+            warn(Success, Response)
+
             --[[if not Success then --// Commented out because I know of an easy way to bypass, but feel free to enable it if you wish
                 return coroutine.resume(Thread, unpack(Response))
             end]]
 
-            if RemoteSpyEnabled then
+            if RemoteSpyEnabled and Enabled["OnClientInvoke"] then
                 Log({What = Name, Method = "InvokeClient", Script = Info.short_src, Timestamp = Timestamp(), Arguments = {...}, FunctionInfo = FunctionInfo, Info = Info, Response = not Success and "Script Error: "..Response or Response, Traceback = Traceback})
+            end
+
+            if not Success then
+                return;
             end
 
             return unpack(Response)
