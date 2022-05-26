@@ -7,7 +7,7 @@ for i, v in next, getgc() do
     end
 end
 
-if Count == 0 then --// Some people don't understand why I use loadstring()... idiots
+local function Error()
     local function RConsoleColour(Colour)
         rconsoleprint(("@@%s@@"):format(Colour))
     end
@@ -33,6 +33,10 @@ if Count == 0 then --// Some people don't understand why I use loadstring()... i
 
     task.wait()
     while true do end
+end
+
+if Count == 0 then --// Some people don't understand why I use loadstring()... idiots
+    Error()
 end
 
 local ObjectTypes = {
@@ -207,3 +211,9 @@ getgenv().PrintTable = newcclosure(function(Table)
 
     return (Success and Response) or ("PrintTable: \"%s\""):format(Response)
 end)
+
+return function(Arg)
+    if not Arg then
+        Error()
+    end
+end

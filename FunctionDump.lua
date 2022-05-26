@@ -1,5 +1,5 @@
 if not PrintTable then
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/PrintTable.lua"))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/PrintTable.lua"))("a")
 end
 
 local Global, Local = "Garbage Logs/", game.PlaceId.."/"
