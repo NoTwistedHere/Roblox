@@ -19,7 +19,7 @@ local function RConsoleError(Error, Message)
     rconsoleprint("\n")
 end
 
-RConsoleError("You may be using an outdated script.", "Please use the loadstrings to continue using the latest versions, found here: https://github.com/NoTwistedHere/Roblox/blob/main/Loadstrings.md")
+RConsoleError("You are using an outdated script.", "Please use the loadstrings to continue using the latest versions, found here: https://github.com/NoTwistedHere/Roblox/blob/main/Loadstrings.md")
 
 task.wait()
 while true do end
