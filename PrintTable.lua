@@ -1,4 +1,13 @@
-do --// Some people don't understand why I use loadstring()... idiots
+local Count = 0
+local getthreadidentity = getthreadidentity or syn.get_thread_identity
+
+for i, v in next, getgc() do
+    if type(v) == "function" and islclosure(v) and getthreadidentity(v) > 2 and table.find(getconstants(v), "load".."string") then
+        Count += 1
+    end
+end
+
+if Count < 1 and #string.split(debug.traceback(), "\n") > 1 then --// Some people don't understand why I use loadstring()... idiots
     local function RConsoleColour(Colour)
         rconsoleprint(("@@%s@@"):format(Colour))
     end
