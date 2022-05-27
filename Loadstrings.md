@@ -31,8 +31,8 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/
 ```
 ## <b>Example Usage:</b>
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/RemoteSpy.lua"))() --// Place the loadstring in your autoexec if you wish to spy :InvokeClient()
 WriteToFile = true
+loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/RemoteSpy.lua"))() --// Place the loadstring in your autoexec if you wish to spy :InvokeClient()
 ```
 Writes to `RemoteSpyLogs/` *(if enabled)*
 
