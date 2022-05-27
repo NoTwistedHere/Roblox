@@ -98,7 +98,7 @@ local function MakeInstance(Object)
     
     if (ClassName == "LocalScript" or ClassName == "ModuleScript") then
         local Hash = getscripthash(Object)
-        local Source = Hash and (DecompiledScripts[Hash] or "--// Not Found") or "--// Script has no bytecode"
+            local Source = Hash and (DecompiledScripts[Hash] or "--// Failed to decompile") or "--// Script has no bytecode"
 
         if ClassName == "LocalScript" then
             IntResult ..= ("<bool name=\"Disabled\">%s</bool>"):format(tostring(Object.Disabled))
