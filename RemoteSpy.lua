@@ -31,6 +31,7 @@ end)
 
 local getthreadidentity = getthreadidentity or syn.get_thread_identity
 local setthreadidentity = setthreadidentity or syn.set_thread_identity
+local isvalidlevel = debug.isvalidlevel or debug.validlevel
 
 if not isexecutorfunction or not getinfo or not hookmetamethod then
     game:GetService("Players").LocalPlayer:Kick("Unsupported exploit")
@@ -152,7 +153,7 @@ end
 local function GetCaller()
     local Traceback, FirstInfo = {};
     for i = 1, 16380 do
-        local Info = debug.isvalidlevel(i) and getinfo(i)
+        local Info = isvalidlevel(i) and getinfo(i)
 
         if not Info then
             return FirstInfo or getinfo(i - 1), Traceback
