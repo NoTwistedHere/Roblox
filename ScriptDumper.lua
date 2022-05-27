@@ -20,7 +20,7 @@ local SpecialCharacters = {
     ["'"] = "&apos;";
 }
 
-local Timeout = Timeout or 300 --// Decompiler timeout (in seconds)
+local Timeout = Timeout or 60 --// Decompiler timeout (in seconds)
 
 if not RunService:IsRunning() then --// So you can dump scripts in games that do a bit of funny business (I'm mainly trying to patch the things I come up with)
     local function IsNetworkOwner(Object)
