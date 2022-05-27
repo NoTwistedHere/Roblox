@@ -213,6 +213,7 @@ local function DecompileScripts()
 
                 Decompiled += 1
                 ProgressBar(Decompiled, #Scripts)
+                task.wait()
             end
 
             RunningThreads -= 1
