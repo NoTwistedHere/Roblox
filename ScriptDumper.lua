@@ -20,6 +20,8 @@ local SpecialCharacters = {
     ["'"] = "&apos;";
 }
 
+local Timeout = Timeout or 300 --// Decompiler timeout (in seconds)
+
 if not RunService:IsRunning() then --// So you can dump scripts in games that do a bit of funny business (I'm mainly trying to patch the things I come up with)
     local function IsNetworkOwner(Object)
         if Object:IsA("BasePart") and isnetworkowner(Object) then
@@ -144,32 +146,72 @@ local function GetScripts(Table)
     rconsoleprint("\n")
 end
 
+local function Decompile(...)
+    if Timeout == 0 then
+        return decompile(...)
+    end
+
+    local Thread = coroutine.running()
+
+    task.spawn(function(...)
+        local Source = decompile(...)
+
+        repeat
+            task.wait()
+        until coroutine.status(Thread) == "suspended"
+        
+        return coroutine.resume(Thread, Source)
+    end, ...)
+
+    task.spawn(function()
+        task.wait(Timeout)
+
+        if coroutine.status(Thread) ~= "suspended" then
+            return;
+        end
+
+        return coroutine.resume(Thread)
+    end)
+
+    return coroutine.yield()
+end
+
+local function FindNextScript()
+    for i, v in next, Scripts do
+        if v then
+            Scripts[i] = nil
+
+            return v
+        end
+    end
+end
+
 local function DecompileScripts()
     local Thread = coroutine.running()
     local RunningThreads = 0
     local Threads = 4
 
     rconsoleprint(("\nDecompiling Scripts [%s]\n"):format(#Scripts))
+    ProgressBar(0, #Scripts)
 
     for i = 1, Threads do
         task.spawn(function()
-            local Previous = i
             RunningThreads += 1
 
             while true do
-                local Script = Scripts[Previous]
+                local Script = FindNextScript()
+
                 if not Script then
-                    break;
+                    continue;
                 end
 
                 local Hash = getscripthash(Script)
 
                 if Hash and not DecompiledScripts[Hash] then
-                    DecompiledScripts[Hash] = decompile(Script) or "--// Failed to decompile"
+                    DecompiledScripts[Hash] = Decompile(Script) or "--// Failed to decompile"
                 end
 
                 Decompiled += 1
-                Previous += Threads
                 ProgressBar(Decompiled, #Scripts)
             end
 

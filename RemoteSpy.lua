@@ -152,7 +152,7 @@ end
 local function GetCaller()
     local Traceback, FirstInfo = {};
     for i = 1, 16380 do
-        local Info = getinfo(i)
+        local Info = debug.isvalidlevel(i) and getinfo(i)
 
         if not Info then
             return FirstInfo or getinfo(i - 1), Traceback
