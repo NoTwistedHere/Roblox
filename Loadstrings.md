@@ -40,3 +40,9 @@ Writes to `RemoteSpyLogs/` *(if enabled)*
 ```lua
 loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/ScriptDumper.lua"))()
 ```
+## <b>Example Usage:</b>
+```lua
+Threads = 10
+loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/ScriptDumper.lua"))() --// Place the loadstring in your autoexec if you wish to spy :InvokeClient()
+```
+Writes to `Game Dumps/`

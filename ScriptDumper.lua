@@ -2,6 +2,7 @@ local CoreGui, CorePackages, Players, RunService = game:GetService("CoreGui"), g
 local Result = "<roblox xmlns:xmime=\"http://www.w3.org/2005/05/xmlmime\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"http://www.roblox.com/roblox.xsd\" version=\"4\">"
 local Decompiled, Scripts = 0, {}
 local DecompiledScripts = {}
+local Threads = Threads or 10
 local Instances = {
     "LocalScript";
     "ModuleScript";
@@ -125,10 +126,14 @@ end
 local function Save()
     local Place = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
     Result ..= "</roblox>"
+
+    if not isfolder("Game Dumps/") then
+        makefolder("Game Dumps")
+    end
     
     rconsoleprint("\n\nWriting to file\n")
     ProgressBar(0, 1)
-    writefile(("Scripts for %s (%s) [%s].rbxlx"):format(tostring(Place and Place.Name or "Unknown Game"):gsub("[^%w%s]", ""), game.PlaceId, game.PlaceVersion), Result)
+    writefile(("Game Dumps/Scripts for %s (%s/%s) [%s].rbxlx"):format(tostring(Place and Place.Name or "Unknown Game"):gsub("[^%w%s]", ""), game.PlaceId, game.GameId, game.PlaceVersion), Result)
     ProgressBar(1, 1)
 end
 
@@ -190,7 +195,6 @@ end
 local function DecompileScripts()
     local Thread = coroutine.running()
     local RunningThreads = 0
-    local Threads = 10
 
     rconsoleprint(("\nDecompiling Scripts [%s]\n"):format(#Scripts))
     ProgressBar(0, #Scripts)
