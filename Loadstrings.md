@@ -14,7 +14,7 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/
 DumpScript("=ReplicatedFirst.LocalScript")
 DumpScripts()
 ```
-Writes to `Garbage Logs/[PlaceId]/`
+Writes to `Garbage Logs/{PlaceId]}`
 
 # PrintTable
 ```lua
@@ -34,7 +34,7 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/
 WriteToFile = true
 loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/RemoteSpy.lua"))() --// Place the loadstring in your autoexec if you wish to spy :InvokeClient()
 ```
-Writes to `RemoteSpyLogs/` *(if enabled)*
+Writes to `RemoteSpyLogs/Remote Spy Logs [{PlaceId-PlaceVersion}]` *(if enabled)*
 
 # ScriptDumper
 ```lua
@@ -45,4 +45,4 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/
 Threads = 10
 loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/ScriptDumper.lua"))() --// Place the loadstring in your autoexec if you wish to spy :InvokeClient()
 ```
-Writes to `Game Dumps/`
+Writes to `Game Dumps/{PlaceId}/Scripts for {Name} [{GameId-PlaceVersion}]`

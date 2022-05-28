@@ -1,4 +1,4 @@
-local CoreGui, CorePackages, Players, RunService = game:GetService("CoreGui"), game:GetService("CorePackages"), game:GetService("Players"), game:GetService("RunService")
+local CoreGui, CorePackages, Players, RunService, RunService = game:GetService("CoreGui"), game:GetService("CorePackages"), game:GetService("Players"), game:GetService("RunService"), game:GetService("RunService")
 local Result = "<roblox xmlns:xmime=\"http://www.w3.org/2005/05/xmlmime\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"http://www.roblox.com/roblox.xsd\" version=\"4\">"
 local Decompiled, Scripts = 0, {}
 local DecompiledScripts = {}
@@ -51,6 +51,30 @@ end
 
 local LocalPlayer = Players.LocalPlayer
 local InstancesCreated, InstancesTotal = 0, #game:GetDescendants()
+local Place = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
+local MainDirectory, SubDirectory, FileName, FileType, Final = "Game Dumps/", game.PlaceId.."/", ("Scripts for %s [%s-%s]"):format(tostring(Place and Place.Name or "Unknown Game"):gsub("[^%w%s]", ""), game.GameId, game.PlaceVersion), ".rbxlx", ""
+
+if not isfolder(MainDirectory) then
+    makefolder(MainDirectory)
+end
+
+if not isfolder(MainDirectory..SubDirectory) then
+    makefolder(MainDirectory..SubDirectory)
+end
+
+if isfile(MainDirectory..SubDirectory..FileName..FileType) then
+    local Name, Count = "", 0
+
+    repeat
+        Count += 1
+        Name = FileName..(" (%d)"):format(Count)
+    until not isfile(MainDirectory..SubDirectory..Name..FileType)
+    
+    FileName = Name
+end
+
+Final = MainDirectory..SubDirectory..FileName..FileType
+writefile(Final, "")
 
 local function GiveColour(Current, Max)
     return (Current < Max * 0.25 and "@@RED@@") or (Current < Max * 0.5 and "@@YELLOW@@") or (Current < Max * 0.75 and "@@CYAN@@") or "@@GREEN@@"
@@ -124,16 +148,11 @@ local function MakeInstance(Object)
 end
 
 local function Save()
-    local Place = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
     Result ..= "</roblox>"
-
-    if not isfolder("Game Dumps/") then
-        makefolder("Game Dumps")
-    end
     
     rconsoleprint("\n\nWriting to file\n")
     ProgressBar(0, 1)
-    writefile(("Game Dumps/Scripts for %s (%s/%s) [%s].rbxlx"):format(tostring(Place and Place.Name or "Unknown Game"):gsub("[^%w%s]", ""), game.PlaceId, game.GameId, game.PlaceVersion), Result)
+    writefile(Final, Result)
     ProgressBar(1, 1)
 end
 
@@ -234,6 +253,7 @@ local function DecompileScripts()
     return coroutine.yield()
 end
 
+RunService:Set3dRenderingEnabled(false)
 rconsoleclear()
 rconsolename("Script Dumper")
 rconsoleprint("Collecting Scripts\n")
@@ -273,3 +293,4 @@ Result..= MakeInstance({
 ProgressBar(1, 1)
 Save()
 rconsoleprint("\n\nFinished")
+RunService:Set3dRenderingEnabled(true)
