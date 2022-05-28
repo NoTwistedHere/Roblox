@@ -190,7 +190,7 @@ end
 local function DecompileScripts()
     local Thread = coroutine.running()
     local RunningThreads = 0
-    local Threads = 12
+    local Threads = 10
 
     rconsoleprint(("\nDecompiling Scripts [%s]\n"):format(#Scripts))
     ProgressBar(0, #Scripts)
