@@ -30,6 +30,28 @@ local function Stringify(String)
     return ConvertCodepoints(String:gsub("\\", ""):gsub("\"", ""):gsub("\\(d+)", ""))
 end
 
+local function GiveColour(Current, Max)
+    return (Current < Max * 0.25 and "@@RED@@") or (Current < Max * 0.5 and "@@YELLOW@@") or (Current < Max * 0.75 and "@@CYAN@@") or "@@GREEN@@"
+end
+
+local function ProgressBar(Current, Max)
+    local Size = 100
+    local Progress, Percentage = math.floor(Size * Current / Max), math.floor(100 * Current / Max)
+    rconsoleprint(GiveColour(Current, Max))
+    rconsoleprint(("\13%s%s %s"):format(("#"):rep(Progress), ("."):rep(Size - Progress), Percentage.."%"))
+    rconsoleprint("@@WHITE@@")
+end
+
+local function CountTable(Table)
+    local Count = 0
+
+    for _ in next, Table do
+        Count += 1
+    end
+
+    return Count
+end
+
 if not isfolder(Global) then
     makefolder(Global)
 end
@@ -43,6 +65,8 @@ function Write(Function, Checked, NoWrite)
         if Checked[v] then
             continue;
         end
+
+        task.wait()
 
         Protos[i] = Write(v, Checked, true)
     end
@@ -78,14 +102,19 @@ getgenv().DumpScript = function(Source)
 end
 
 getgenv().DumpScripts = function()
-    local Scripts = {}
+    local Scripts, GC = {}, getgc()
     local Directory = Global..Local
 
     if not isfolder(Global..Local) then
         makefolder(Global..Local)
     end
 
-    for i, v in next, getgc() do
+    rconsoleclear()
+    rconsolename("FunctionDumper")
+    rconsolewarn("Collecting Functions\n")
+    ProgressBar(0, #GC)
+
+    for i, v in next, GC do
         local Info = type(v) == "function" and islclosure(v) and not is_synapse_function(v) and getinfo(v)
 
         if Info then
@@ -96,19 +125,32 @@ getgenv().DumpScripts = function()
             end
 
             table.insert(Scripts[Info.short_src], {v, Info})
+            ProgressBar(i, #GC)
         end
     end
+
+    ProgressBar(1, 1)
+    task.wait()
+    rconsoleprint("\nDumping Functions\n")
+    ProgressBar(0, #Scripts)
+
+    local Count, ScriptsCount = 0, CountTable(Scripts)
 
     for Source, Dump in next, Scripts do
         local Final = Directory..Source..".lua"
-        table.sort(Dump, function(a, b) return a[2].currentline < b[2].currentline end)
 
+        Count += 1
+        table.sort(Dump, function(a, b) return a[2].currentline < b[2].currentline end)
         writefile(Final, "")
+        task.wait()
 
         for _, Data in next, Dump do
             appendfile(Final, PrintTable(Write(Data[1])))
+            task.wait()
         end
+
+        ProgressBar(Count, ScriptsCount)
     end
 
-    rconsolewarn("Finished")
+    rconsoleprint("\nFinished")
 end
