@@ -100,7 +100,7 @@ local function MakeInstance(Object)
     
     if (ClassName == "LocalScript" or ClassName == "ModuleScript") then
         local Hash = getscripthash(Object)
-            local Source = Hash and (DecompiledScripts[Hash] or "--// Failed to decompile") or "--// Script has no bytecode"
+        local Source = Hash and (DecompiledScripts[Hash] or "--// Failed to decompile") or "--// Script has no bytecode"
 
         if ClassName == "LocalScript" then
             IntResult ..= ("<bool name=\"Disabled\">%s</bool>"):format(tostring(Object.Disabled))
@@ -134,55 +134,56 @@ end
 
 local function GetScripts(Table)
     for i, v in next, Table do
-        ProgressBar(i, #Table)
-
         if (not v:IsA("LocalScript") and not v:IsA("ModuleScript")) or (v:IsDescendantOf(CoreGui) or v:IsDescendantOf(CorePackages)) or table.find(Scripts, v) then
             continue;
         end
+
+        ProgressBar(i, #Table)
         
         table.insert(Scripts, v)
     end
+
+    ProgressBar(1, 1)
 
     rconsoleprint("\n")
 end
 
 local function Decompile(...)
-    if Timeout == 0 then
+    --if Timeout == 0 then
         return decompile(...)
-    end
+    --end
 
-    local Thread = coroutine.running()
-
-    task.spawn(function(...)
+    --[[local Thread = coroutine.running()
+    local DecompThread = task.spawn(function(...)
         local Source = decompile(...)
 
-        repeat
-            task.wait()
-        until coroutine.status(Thread) == "suspended"
+        if coroutine.status(Thread) ~= "suspended" then
+            repeat
+                task.wait(0.2) --// There's no rush
+            until coroutine.status(Thread) == "suspended"
+        end
         
         return coroutine.resume(Thread, Source)
     end, ...)
 
-    task.spawn(function()
-        task.wait(Timeout)
-
+    task.delay(Timeout, function()
         if coroutine.status(Thread) ~= "suspended" then
             return;
         end
 
+        coroutine.close(DecompThread)
+
         return coroutine.resume(Thread)
     end)
 
-    return coroutine.yield()
+    return coroutine.yield()]]
 end
 
 local function FindNextScript()
     for i, v in next, Scripts do
-        if v then
-            Scripts[i] = nil
+        Scripts[i] = nil
 
-            return v
-        end
+        return v
     end
 end
 
@@ -202,12 +203,13 @@ local function DecompileScripts()
                 local Script = FindNextScript()
 
                 if not Script then
-                    continue;
+                    break;
                 end
 
                 local Hash = getscripthash(Script)
 
-                if Hash and not DecompiledScripts[Hash] then
+                if Hash and not DecompiledScripts[Hash] then    
+                    DecompiledScripts[Hash] = "--// Decompiling..."
                     DecompiledScripts[Hash] = Decompile(Script) or "--// Failed to decompile"
                 end
 
