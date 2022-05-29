@@ -1,3 +1,4 @@
+local HttpService = game:GetService("HttpService")
 local ObjectTypes = {
     ["nil"] = 1;
     ["boolean"] = 1;
@@ -83,11 +84,26 @@ local function ConvertCodepoints(OriginalString, Modified, Extra)
     return "\""..OriginalString.."\"", Extra and Modified > 0 or nil
 end
 
-local function Stringify(String, Extra)
+local function Stringify(String, Extra, Checked, Root)
+    local function Add(Message)
+        if Checked and Root then
+            Checked[String] = Message or Root
+        end
+    end
+
     if type(String) ~= "string" then
         return;
-    elseif #String > 5e3 then
-        return "\"String is larger than 5e3 (Very Large)\""
+    elseif Checked and Checked[String] then
+        return Checked[String]
+    end
+
+    Add()
+
+    if #String > 5e3 then
+        local Message = ("\"String is larger than 5e3 (Very Large) #%s\""):format(HttpService:GenerateGUID())
+        Add(Message)
+
+        return Message
     end
     
     return ConvertCodepoints(AntiRep(String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end), Extra))
@@ -116,16 +132,16 @@ local function Tostring(Object)
     return tostring(Object)
 end
 
-local function ParseObject(Object, DetailedInfo, TypeOf)
+local function ParseObject(Object, DetailedInfo, TypeOf, Checked, Root)
     local Type = typeof(Object)
     local ObjectType = ObjectTypes[Type]
     
     local function _Parse()
         if ObjectType == 2 then
-            local String, Modified = Stringify(Object, true)
-            return Stringify(Object), Modified
+            local String, Modified = Stringify(Object, true, Checked, Root)
+            return String, Modified
         elseif ObjectType == 3 then
-            return Stringify(Object:GetFullName()), " ClassName: "..Object.ClassName
+            return Stringify(Object:GetFullName(), false, Checked, Root), " ClassName: "..Object.ClassName
         elseif ObjectType == 5 then
             local Info = getinfo(Object)
             return ("%s"):format(tostring(Object)), (" source: %s, what: %s, name: %s (currentline: %s, numparams: %s, nups: %s, is_vararg: %s)"):format(Stringify(Info.source), Info.what, Stringify(Info.name), Info.currentline, Info.numparams, Info.nups, Info.is_vararg)
@@ -139,23 +155,25 @@ local function ParseObject(Object, DetailedInfo, TypeOf)
     return Parsed[1], (TypeOf and ("[%s]"):format(Type) or "") .. (DetailedInfo and unpack(Parsed, 2) or "")
 end
 
-_PrintTable = function(Table, Indents, Checked)
+_PrintTable = function(Table, Indents, Checked, Root)
     local TableCount, TabWidth, Result, Count = CountTable(Table), "    ", "", 1
     local Metatable = getrawmetatable(Table)
 
+    Root = Root or "Table"
     Checked = Checked or {}
     Indents = Indents or 1
     Checked[Table] = true
 
     --Sort(Table)
 
-    for i,v in pairs(Table) do
+    for i, v in pairs(Table) do
+        local NewRoot = Root..("[%s]"):format(type(i) == "number" and i or ("\"%s\""):format(i))
         local IsValid = type(v) == "table" and not Checked[v]
-        local Parsed = {ParseObject(v, true, true)}
-        local Value = IsValid and _PrintTable(v, Indents + 1, Checked) or Parsed[1]
+        local Parsed = {ParseObject(v, true, true, Checked, NewRoot)}
+        local Value = IsValid and _PrintTable(v, Indents + 1, Checked, NewRoot) or Parsed[1]
         local Comment = (IsValid and Parsed[1]..(Parsed[2] and " " or "") or "") .. (Parsed[2] and Parsed[2] or "")
 
-        Result ..= ("%s[%s] = %s%s%s\n"):format(string.rep(TabWidth, Indents), ParseObject(i), Value, Count < TableCount and "," or "", #Comment > 0 and " --// " .. Comment or "")
+        Result ..= ("%s[%s] = %s%s%s\n"):format(string.rep(TabWidth, Indents), ParseObject(i, false, false, Checked, NewRoot), Value, Count < TableCount and "," or "", #Comment > 0 and " --// " .. Comment or "")
         Count += 1
     end
 
