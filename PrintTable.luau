@@ -97,13 +97,13 @@ local function Stringify(String, Extra, Checked, Root)
         return Checked[String]
     end
 
-    Add()
-
     if #String > 5e3 then
         local Message = ("\"String is larger than 5e3 (Very Large) #%s\""):format(HttpService:GenerateGUID())
         Add(Message)
 
         return Message
+    elseif #String > 5e1 then
+        Add()
     end
     
     return ConvertCodepoints(AntiRep(String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end), Extra))
