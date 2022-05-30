@@ -84,31 +84,6 @@ local function ConvertCodepoints(OriginalString, Modified, Extra)
     return "\""..OriginalString.."\"", Extra and Modified > 0 or nil
 end
 
-local function Stringify(String, Extra, Checked, Root)
-    local function Add(Message)
-        if Checked and Root then
-            Checked[String] = Message or Root
-        end
-    end
-
-    if type(String) ~= "string" then
-        return;
-    elseif Checked and Checked[String] then
-        return Checked[String]
-    end
-
-    if #String > 5e3 then
-        local Message = ("\"String is larger than 5e3 (Very Large) #%s\""):format(HttpService:GenerateGUID())
-        Add(Message)
-
-        return Message
-    elseif utf8.len(String) > 1e2 then
-        Add()
-    end
-    
-    return ConvertCodepoints(AntiRep(String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end), Extra))
-end
-
 local function Tostring(Object)
     local Metatable = getrawmetatable(Object)
 
@@ -130,6 +105,31 @@ local function Tostring(Object)
 
 
     return tostring(Object)
+end
+
+local function Stringify(String, Extra, Checked, Root)
+    local function Add(Message)
+        if Checked and Root then
+            Checked[String] = Message or Root
+        end
+    end
+
+    if type(String) ~= "string" then
+        return Tostring(String)
+    elseif Checked and Checked[String] then
+        return Checked[String]
+    end
+
+    if #String > 5e3 then
+        local Message = ("\"String is larger than 5e3 (Very Large) #%s\""):format(HttpService:GenerateGUID())
+        Add(Message)
+
+        return Message
+    elseif utf8.len(String) > 1e2 then
+        Add()
+    end
+    
+    return ConvertCodepoints(AntiRep(String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end), Extra))
 end
 
 local function ParseObject(Object, DetailedInfo, TypeOf, Checked, Root)
@@ -167,7 +167,7 @@ _PrintTable = function(Table, Indents, Checked, Root)
     --Sort(Table)
 
     for i, v in pairs(Table) do
-        local NewRoot = Root..("[%s]"):format(type(i) == "number" and i or ("\"%s\""):format(Tostring(i)))
+        local NewRoot = Root..("[%s]"):format(type(i) == "number" and i or ("\"%s\""):format(Stringify(i)))
         local IsValid = type(v) == "table" and not Checked[v]
         local Parsed = {ParseObject(v, true, true, Checked, NewRoot)}
         local Value = IsValid and _PrintTable(v, Indents + 1, Checked, NewRoot) or Parsed[1]
