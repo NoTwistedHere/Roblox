@@ -196,7 +196,7 @@ if GetCallerV2 then
             local Info, Traceback = GetCaller()
             Stacks[Call] = Traceback
             
-            local Success, Response = SortArguments(pcall, Old, ...)
+            local Success, Response = SortArguments(pcall(Old, ...))
     
             if not Success then
                 Stacks[Call] = nil
@@ -217,10 +217,9 @@ if GetCallerV2 then
             local Info, Traceback = GetCaller()
             Stacks[Call] = Traceback
             
-            local Success, Response = SortArguments(pcall, Old, ...)
-    
+            local Success, Response = SortArguments(pcall(Old, ...))
+
             if not Success then
-                warn(Response)
                 Stacks[Call] = nil
             end
     
@@ -238,7 +237,7 @@ if GetCallerV2 then
         local Info, Traceback = GetCaller()
         Stacks[Call] = Traceback
         
-        local Success, Response = SortArguments(pcall, OldS, ...)
+        local Success, Response = SortArguments(pcall(OldS, ...))
 
         if not Success then
             Stacks[Call] = nil
