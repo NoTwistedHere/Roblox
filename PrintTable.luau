@@ -102,7 +102,7 @@ local function Stringify(String, Extra, Checked, Root)
         Add(Message)
 
         return Message
-    elseif #String > 5e1 then
+    elseif utf8.len(String) > 1e2 then
         Add()
     end
     
