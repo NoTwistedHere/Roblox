@@ -18,6 +18,7 @@ local Methods = {
     RemoteEvent = "FireServer";
     RemoteFunction = "InvokeServer";
 }
+local Stacks, Source = {}, getinfo(1).source
 local Directory, FileName, FileType = "RemoteSpyLogs/", ("RemoteSpy Logs [%s_%s]"):format(game.PlaceId, game.PlaceVersion), ".luau"
 local GetFullName = game.GetFullName
 local isexecutorfunction = isexecutorfunction or is_synapse_function or isexecutorclosure or isourclosure or function(f) return getinfo(f, "s").source:find("@") and true or false end
@@ -31,7 +32,6 @@ local hookmetamethod = hookmetamethod or newcclosure(function(Object, Metamethod
     
     return hookfunction(Original, Function)
 end)
-local Stacks, Source = {}, getinfo(1).source
 
 if not isexecutorfunction or not getinfo or not hookmetamethod then
     game:GetService("Players").LocalPlayer:Kick("Unsupported exploit")
@@ -187,12 +187,13 @@ end
 if GetCallerV2 then
     local function HookFunc(Func)
         local Old; Old = hookfunction(Func, function(...)
-            local Call, Arguments, Info, Traceback = SortArguments(...), GetCaller()
+            local Call = ...
     
             if type(Call) ~= "function" then
                 return Old(...)
             end
-    
+
+            local Info, Traceback = GetCaller()
             Stacks[Call] = Traceback
             
             local Success, Response = SortArguments(pcall, Old, ...)
@@ -207,17 +208,19 @@ if GetCallerV2 then
 
     local function HookFuncThread(Func)
         local Old; Old = hookfunction(Func, function(...)
-            local Call, Arguments, Info, Traceback = SortArguments(...), GetCaller()
+            local Call = ...
     
             if type(Call) ~= "function" and type(Call) ~= "thread" then
                 return Old(...)
             end
     
+            local Info, Traceback = GetCaller()
             Stacks[Call] = Traceback
             
             local Success, Response = SortArguments(pcall, Old, ...)
     
             if not Success then
+                warn(Response)
                 Stacks[Call] = nil
             end
     
@@ -226,12 +229,13 @@ if GetCallerV2 then
     end
 
     local OldS; OldS = hookfunction(spawn, function(...)
-        local Call, Arguments, Info, Traceback = SortArguments(...), GetCaller()
+        local Call = ...
 
         if type(Call) ~= "function" and type(Call) ~= "thread" and (typeof(Call) ~= "userdata" and not getrawmetatable(Call).__call) then
             return OldS(...)
         end
 
+        local Info, Traceback = GetCaller()
         Stacks[Call] = Traceback
         
         local Success, Response = SortArguments(pcall, OldS, ...)
