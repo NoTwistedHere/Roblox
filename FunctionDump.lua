@@ -5,13 +5,14 @@ end
 local Global, Local = "Garbage Logs/", game.PlaceId.."/"
 
 local function ConvertCodepoints(OriginalString)
-    if OriginalString:match("[^%a%c%d%l%p%s%u%x]") then
+    if OriginalString:match("[^%a%c%d%l%p%s%u%x]") or OriginalString:match("[\\/:*?\"<>|]") then
         local String = ""
 
         for i = 1, #OriginalString do
             local Byte = string.byte(OriginalString, i, i)
+            local Char = string.char(Byte)
 
-            if Byte <= 126 and Byte >= 33 then
+            if Byte <= 126 and Byte >= 33 and not Char:match("[\\/:*?\"<>|]") then
                 String ..= string.char(Byte)
             end
         end
@@ -66,8 +67,6 @@ function Write(Function, Checked, NoWrite)
             continue;
         end
 
-        task.wait()
-
         Protos[i] = Write(v, Checked, true)
     end
 
@@ -75,13 +74,17 @@ function Write(Function, Checked, NoWrite)
 end
 
 getgenv().DumpScript = function(Source)
-    local Functions = {}
+    local Functions, GC = {}, getgc()
     local Final = Global..Local..Stringify(Source)..".lua"
 
     if not isfolder(Global..Local) then
         makefolder(Global..Local)
     end
 
+    rconsoleclear()
+    rconsolename("FunctionDumper")
+    rconsoleprint("Collecting Functions\n")
+    ProgressBar(0, #GC)
     writefile(Final, "")
 
     for i, v in next, getgc() do
@@ -89,16 +92,23 @@ getgenv().DumpScript = function(Source)
 
         if Info and Info.source == Source then
             table.insert(Functions, {v, Info})
+            ProgressBar(i, #GC)
         end
     end
 
+    ProgressBar(1, 1)
+    rconsoleprint("\nDumping Functions\n")
+    ProgressBar(0, #Functions)
+
     table.sort(Functions, function(a, b) return a[2].currentline < b[2].currentline end)
 
-    for _, Data in next, Functions do
+    for i, Data in next, Functions do
         appendfile(File, PrintTable(Write(Data[1])))
+
+        ProgressBar(i, #Functions)
     end
 
-    rconsolewarn("Finished")
+    rconsoleprint("\nFinished")
 end
 
 getgenv().DumpScripts = function()
@@ -111,7 +121,7 @@ getgenv().DumpScripts = function()
 
     rconsoleclear()
     rconsolename("FunctionDumper")
-    rconsolewarn("Collecting Functions\n")
+    rconsoleprint("Collecting Functions\n")
     ProgressBar(0, #GC)
 
     for i, v in next, GC do
@@ -130,7 +140,6 @@ getgenv().DumpScripts = function()
     end
 
     ProgressBar(1, 1)
-    task.wait()
     rconsoleprint("\nDumping Functions\n")
     ProgressBar(0, #Scripts)
 
@@ -142,11 +151,9 @@ getgenv().DumpScripts = function()
         Count += 1
         table.sort(Dump, function(a, b) return a[2].currentline < b[2].currentline end)
         writefile(Final, "")
-        task.wait()
 
         for _, Data in next, Dump do
             appendfile(Final, PrintTable(Write(Data[1])))
-            task.wait()
         end
 
         ProgressBar(Count, ScriptsCount)
