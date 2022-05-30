@@ -115,7 +115,7 @@ local function Stringify(String, Extra, Checked, Root)
     end
 
     if type(String) ~= "string" then
-        return Tostring(String)
+        return String and Tostring(String) or nil
     elseif Checked and Checked[String] then
         return Checked[String]
     end
@@ -125,7 +125,7 @@ local function Stringify(String, Extra, Checked, Root)
         Add(Message)
 
         return Message
-    elseif utf8.len(String) > 1e2 then
+    elseif #String > 2e2 then
         Add()
     end
     
