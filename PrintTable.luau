@@ -167,7 +167,7 @@ _PrintTable = function(Table, Indents, Checked, Root)
     --Sort(Table)
 
     for i, v in pairs(Table) do
-        local NewRoot = Root..("[%s]"):format(type(i) == "number" and i or ("\"%s\""):format(i))
+        local NewRoot = Root..("[%s]"):format(type(i) == "number" and i or ("\"%s\""):format(Tostring(i)))
         local IsValid = type(v) == "table" and not Checked[v]
         local Parsed = {ParseObject(v, true, true, Checked, NewRoot)}
         local Value = IsValid and _PrintTable(v, Indents + 1, Checked, NewRoot) or Parsed[1]
