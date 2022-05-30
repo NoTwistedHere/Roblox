@@ -129,7 +129,7 @@ local function Stringify(String, Extra, Checked, Root)
         Add()
     end
     
-    return ConvertCodepoints(AntiRep(String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\\(d+)", function(Char) return "\\"..Char end), Extra))
+    return ConvertCodepoints(AntiRep(String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("%c", function(Char) return "\\"..string.byte(Char) end), Extra))
 end
 
 local function ParseObject(Object, DetailedInfo, TypeOf, Checked, Root)
