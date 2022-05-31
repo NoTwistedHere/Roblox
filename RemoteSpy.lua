@@ -18,9 +18,13 @@ local Methods = {
     RemoteEvent = "FireServer";
     RemoteFunction = "InvokeServer";
 }
+local Stacks, Source = {}, getinfo(1).source
 local Directory, FileName, FileType = "RemoteSpyLogs/", ("RemoteSpy Logs [%s_%s]"):format(game.PlaceId, game.PlaceVersion), ".luau"
 local GetFullName = game.GetFullName
 local isexecutorfunction = isexecutorfunction or is_synapse_function or isexecutorclosure or isourclosure or function(f) return getinfo(f, "s").source:find("@") and true or false end
+local getthreadidentity = getthreadidentity or syn.get_thread_identity
+local setthreadidentity = setthreadidentity or syn.set_thread_identity
+local isvalidlevel = debug.isvalidlevel or debug.validlevel
 local hookmetamethod = hookmetamethod or newcclosure(function(Object, Metamethod, Function)
     local Metatable = assert(getrawmetatable(Object), ("bad argument #1 (%s does not have a metatable)"):format(tostring(typeof(Object))))
     local Original = assert(rawget(Metatable, Metamethod), "bad argument #2 (metamethod doesn't exist)")
@@ -28,10 +32,6 @@ local hookmetamethod = hookmetamethod or newcclosure(function(Object, Metamethod
     
     return hookfunction(Original, Function)
 end)
-
-local getthreadidentity = getthreadidentity or syn.get_thread_identity
-local setthreadidentity = setthreadidentity or syn.set_thread_identity
-local isvalidlevel = debug.isvalidlevel or debug.validlevel
 
 if not isexecutorfunction or not getinfo or not hookmetamethod then
     game:GetService("Players").LocalPlayer:Kick("Unsupported exploit")
@@ -150,16 +150,29 @@ local function ArgGuard(self, ...)
     return true
 end
 
-local function GetCaller()
+local GetCaller; GetCaller = function()
     local Traceback, FirstInfo = {};
     for i = 1, 16380 do
         local Info = isvalidlevel(i) and getinfo(i)
 
         if not Info then
-            return FirstInfo or getinfo(i - 1), Traceback
-        end
+            local NewInfo = FirstInfo or getinfo(i - 1)
+            local OldTraceback = Stacks[NewInfo.func]
+            
+            if GetCallerV2 and OldTraceback then
+                for _, v in next, OldTraceback do
+                    table.insert(Traceback, v)
+                end
 
-        table.insert(Traceback, ("%s:%d"):format(Info.short_src, Info.currentline))
+                Stacks[NewInfo.func] = nil
+            end
+            
+            return NewInfo, Traceback
+        end
+        
+        if Info.source ~= Source then
+            table.insert(Traceback, ("%s:%d"):format(Info.short_src, Info.currentline))
+        end
 
         if Info.what ~= "C" and not isexecutorfunction(Info.func) and not FirstInfo then
             FirstInfo = Info
@@ -171,13 +184,83 @@ local function SortArguments(self, ...)
     return self, {...}
 end
 
+if GetCallerV2 then
+    local function HookFunc(Func)
+        local Old; Old = hookfunction(Func, function(...)
+            local Call = ...
+    
+            if type(Call) ~= "function" then
+                return Old(...)
+            end
+
+            local Info, Traceback = GetCaller()
+            Stacks[Call] = Traceback
+            
+            local Success, Response = SortArguments(pcall(Old, ...))
+    
+            if not Success then
+                Stacks[Call] = nil
+            end
+    
+            return unpack(Response)
+        end)
+    end
+
+    local function HookFuncThread(Func)
+        local Old; Old = hookfunction(Func, function(...)
+            local Call = ...
+    
+            if type(Call) ~= "function" and type(Call) ~= "thread" then
+                return Old(...)
+            end
+    
+            local Info, Traceback = GetCaller()
+            Stacks[Call] = Traceback
+            
+            local Success, Response = SortArguments(pcall(Old, ...))
+
+            if not Success then
+                Stacks[Call] = nil
+            end
+    
+            return unpack(Response)
+        end)
+    end
+
+    local OldS; OldS = hookfunction(spawn, function(...)
+        local Call = ...
+
+        if type(Call) ~= "function" and type(Call) ~= "thread" and (typeof(Call) ~= "userdata" and not getrawmetatable(Call).__call) then
+            return OldS(...)
+        end
+
+        local Info, Traceback = GetCaller()
+        Stacks[Call] = Traceback
+        
+        local Success, Response = SortArguments(pcall(OldS, ...))
+
+        if not Success then
+            Stacks[Call] = nil
+        end
+
+        return unpack(Response)
+    end)
+
+    HookFunc(getrenv().coroutine.create)
+    HookFunc(getrenv().coroutine.wrap)
+    HookFunc(getrenv().delay)
+    HookFuncThread(getrenv().task.spawn)
+    HookFuncThread(getrenv().task.defer)
+    HookFuncThread(getrenv().task.delay)
+end
+
 for Name, Method in next, Methods do
     local Original; Original = hookfunction(Instance.new(Name)[Method], function(...)
         local self, Arguments = SortArguments(...)
 
         if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and not Ignore(...) then
             local Thread = coroutine.running()
-            local Info, Traceback = GetCaller()
+            local Info, Traceback = GetCaller(Original, ...)
             local Method = Method.." (Raw)"
 
             task.spawn(function(...)
