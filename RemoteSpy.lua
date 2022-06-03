@@ -1,4 +1,5 @@
 --// Report any issues/detections to me
+--// Please try out GetCallerV2 and let me know of any issues you have with it (I expect issues)
 
 if not PrintTable then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/PrintTable.luau"))()
@@ -161,7 +162,8 @@ local GetCaller; GetCaller = function()
             
             if GetCallerV2 and OldTraceback then
                 for _, v in next, OldTraceback do
-                    table.insert(Traceback, v)
+                    table.insert(Traceback, v[2])
+                    --NewInfo = v[1]
                 end
 
                 Stacks[NewInfo.func] = nil
@@ -194,13 +196,11 @@ if GetCallerV2 then
             end
 
             local Info, Traceback = GetCaller()
-            Stacks[Call] = Traceback
+            Stacks[Call] = {Info, Traceback}
             
             local Success, Response = SortArguments(pcall(Old, ...))
     
-            if not Success then
-                Stacks[Call] = nil
-            end
+            Stacks[Call] = nil
     
             return unpack(Response)
         end)
@@ -215,13 +215,11 @@ if GetCallerV2 then
             end
     
             local Info, Traceback = GetCaller()
-            Stacks[Call] = Traceback
+            Stacks[Call] = {Info, Traceback}
             
             local Success, Response = SortArguments(pcall(Old, ...))
 
-            if not Success then
-                Stacks[Call] = nil
-            end
+            Stacks[Call] = nil
     
             return unpack(Response)
         end)
@@ -235,13 +233,11 @@ if GetCallerV2 then
         end
 
         local Info, Traceback = GetCaller()
-        Stacks[Call] = Traceback
+        Stacks[Call] = {Info, Traceback}
         
         local Success, Response = SortArguments(pcall(OldS, ...))
 
-        if not Success then
-            Stacks[Call] = nil
-        end
+        Stacks[Call] = nil
 
         return unpack(Response)
     end)

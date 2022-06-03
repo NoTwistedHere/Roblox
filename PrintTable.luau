@@ -115,7 +115,7 @@ local function Stringify(String, Extra, Checked, Root)
     end
 
     if type(String) ~= "string" then
-        return String and Tostring(String) or nil
+        return Tostring(String)
     elseif Checked and Checked[String] then
         return Checked[String]
     end
