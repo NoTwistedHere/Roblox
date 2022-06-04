@@ -90,7 +90,7 @@ local function Tostring(Object)
     if Metatable and rawget(Metatable, "__tostring") then
         local Old, IsReadOnly, Response = rawget(Metatable, "__tostring"), isreadonly(Metatable);
 
-        if type(Old) ~= "function" or not islclosure(Old) then
+        if type(Old) ~= "function" or islclosure(Old) then
             setreadonly(Metatable, false)
             rawset(Metatable, "__tostring", nil)
             Response = tostring(Object)
