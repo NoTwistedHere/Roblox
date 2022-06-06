@@ -261,7 +261,7 @@ if GetCallerV2 then
     
             local Info, Traceback, Edited = GetCaller(...), false
 
-            if table.find(Hooks, Call) then
+            if Hooks[Call] then
                 Edited = true
                 table.insert(Arguments, 1, GenerateGUID(Info, Traceback))
             end
@@ -283,6 +283,8 @@ if GetCallerV2 then
 
                 return unpack(Response)
             end
+
+            warn("Not Edited")
             
             local Success, Response = SortArguments(pcall(Old, ...))
     
