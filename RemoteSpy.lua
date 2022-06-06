@@ -161,6 +161,7 @@ local function V2CheckArguments(Arguments)
 
     for i, v in next, Arguments do
         if type(v) == "string" and Stacks[v] then
+            print("wow")
             local Stack = Stacks[v]
             table.insert(Traceback, Stack[2])
             Info = Stack[1]
@@ -170,7 +171,8 @@ local function V2CheckArguments(Arguments)
     return Info, Traceback
 end
 
-local GetCaller; GetCaller = function(Arguments)
+local GetCaller; GetCaller = function(...)
+    local Arguments = {...}
     local Traceback, FirstInfo = {};
     for i = 1, 16380 do
         local Info = isvalidlevel(i) and getinfo(i)
@@ -183,9 +185,8 @@ local GetCaller; GetCaller = function(Arguments)
                 for _, v in next, ValidArgs[2] do
                     table.insert(Traceback, v)
                 end
+                
                 NewInfo = ValidArgs[1]
-
-                Stacks[NewInfo.func] = nil
             end
             
             return NewInfo, Traceback
@@ -232,12 +233,12 @@ if GetCallerV2 then
                 return Old(...)
             end
 
-            local Info, Traceback, Edited = GetCaller(), false
+            local Info, Traceback, Edited = GetCaller(...), false
 
             for i, v in next, Arguments do
-                if not IsNotTraceable[v] and i ~= 1 and not table.find(Hooks, v) then
+                if not IsNotTraceable[v] and i ~= 1 and not Hooks[v] then
                     break;
-                elseif (i == 1 and table.find(Hooks, v)) or (i > 1 and IsNotTraceable[i - 1] and table.find(Hooks, v)) then
+                elseif (i == 1 and Hooks[v]) or (i > 1 and IsNotTraceable[i - 1] and Hooks[v]) then
                     Edited = true
                     table.insert(Arguments, Arguments[i + 1], GenerateGUID(Info, Traceback))
                     continue;
@@ -258,17 +259,32 @@ if GetCallerV2 then
                 return Old(...)
             end
     
-            local Info, Traceback, Edited = GetCaller(), false
+            local Info, Traceback, Edited = GetCaller(...), false
+
+            if table.find(Hooks, Call) then
+                Edited = true
+                table.insert(Arguments, 1, GenerateGUID(Info, Traceback))
+            end
 
             for i, v in next, Arguments do
-                if (i == 1 and table.find(Hooks, v)) or (i > 1 and IsNotTraceable[i - 1] and table.find(Hooks, v)) then
+                if not IsNotTraceable[v] and not Hooks[v] then
+                    break;
+                elseif Hooks[v] then
                     Edited = true
                     table.insert(Arguments, Arguments[i + 1], GenerateGUID(Info, Traceback))
                     continue;
                 end
             end
+
+            if Edited then
+                warn("FUCKING EDITED")
+
+                local Success, Response = SortArguments(pcall(Old, Call, unpack(Arguments)))
+
+                return unpack(Response)
+            end
             
-            local Success, Response = Edited and SortArguments(pcall(Old, Call, unpack(Arguments))) or SortArguments(pcall(Old, ...))
+            local Success, Response = SortArguments(pcall(Old, ...))
     
             return unpack(Response)
         end)
@@ -281,10 +297,12 @@ if GetCallerV2 then
             return OldS(...)
         end
 
-        local Info, Traceback, Edited = GetCaller(), false
+        local Info, Traceback, Edited = GetCaller(...), false
 
         for i, v in next, Arguments do
-            if (i == 1 and table.find(Hooks, v)) or (i > 1 and IsNotTraceable[i - 1] and table.find(Hooks, v)) then
+            if not IsNotTraceable[v] and i ~= 1 and not Hooks[v] then
+                break;
+            elseif (i == 1 and Hooks[v]) or (i > 1 and IsNotTraceable[i - 1] and Hooks[v]) then
                 Edited = true
                 table.insert(Arguments, Arguments[i + 1], GenerateGUID(Info, Traceback))
                 continue;
@@ -310,7 +328,7 @@ for Name, Method in next, Methods do
 
         if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and not Ignore(...) then
             local Thread = coroutine.running()
-            local Info, Traceback = GetCaller(Original, ...)
+            local Info, Traceback = GetCaller(...)
             local Method = Method.." (Raw)"
 
             task.spawn(function(...)
@@ -329,6 +347,8 @@ for Name, Method in next, Methods do
                 repeat
                     task.wait()
                 until coroutine.status(Thread) == "suspended"
+
+                warn(Response)
     
                 coroutine.resume(Thread, unpack(Response))
             end, ...)
@@ -348,7 +368,7 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
     
     if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and Methods[self.ClassName] == Method and not Ignore(...) then
         local Thread = coroutine.running()
-        local Info, Traceback = GetCaller()
+        local Info, Traceback = GetCaller(...)
 
         task.spawn(function(...)
             setnamecallmethod(Method)
@@ -414,7 +434,7 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...
         local Name, ClassName = GetFullName(self), self.ClassName
         local Function = Arguments[2]
         local FunctionInfo = getinfo(Function)
-        local Info, Traceback = GetCaller()
+        local Info, Traceback = GetCaller(...)
 
         return OldNewIndex(self, "OnClientInvoke", function(...)
             local Success, Response = SafeCall(Function, ...)
