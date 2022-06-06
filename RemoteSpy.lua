@@ -18,9 +18,11 @@ local Methods = {
     RemoteEvent = "FireServer";
     RemoteFunction = "InvokeServer";
 }
+local Hooks = {}
 local Stacks, Source = {}, getinfo(1).source
 local Directory, FileName, FileType = "RemoteSpyLogs/", ("RemoteSpy Logs [%s_%s]"):format(game.PlaceId, game.PlaceVersion), ".luau"
 local GetFullName = game.GetFullName
+local HttpService = game:GetService("HttpService")
 local isexecutorfunction = isexecutorfunction or is_synapse_function or isexecutorclosure or isourclosure or function(f) return getinfo(f, "s").source:find("@") and true or false end
 local getthreadidentity = getthreadidentity or syn.get_thread_identity
 local setthreadidentity = setthreadidentity or syn.set_thread_identity
@@ -150,19 +152,43 @@ local function ArgGuard(self, ...)
     return true
 end
 
-local GetCaller; GetCaller = function()
+local function V2CheckArguments(Arguments)
+    if type(Arguments) ~= "table" then
+        return false
+    end
+
+    local Traceback, Info = {};
+
+    for i, v in next, Arguments do
+        if type(v) == "string" and Stacks[v] then
+            local Stack = Stacks[v]
+            table.insert(Traceback, Stack[2])
+            Info = Stack[1]
+        end
+    end
+
+    return Info, Traceback
+end
+
+local GetCaller; GetCaller = function(Arguments)
     local Traceback, FirstInfo = {};
     for i = 1, 16380 do
         local Info = isvalidlevel(i) and getinfo(i)
 
         if not Info then
             local NewInfo = FirstInfo or getinfo(i - 1)
-            local OldTraceback = Stacks[NewInfo.func]
+            local ValidArgs = V2CheckArguments(Arguments)
             
+<<<<<<< Updated upstream
             if GetCallerV2 and OldTraceback then
                 for _, v in next, OldTraceback do
+=======
+            if GetCallerV2 and ValidArgs then
+                for _, v in next, ValidArgs[2] do
+>>>>>>> Stashed changes
                     table.insert(Traceback, v)
                 end
+                NewInfo = ValidArgs[1]
 
                 Stacks[NewInfo.func] = nil
             end
@@ -185,14 +211,33 @@ local function SortArguments(self, ...)
 end
 
 if GetCallerV2 then
+    local IsNotTraceable = {
+        getrenv().coroutine.create,
+        getrenv().coroutine.wrap,
+        getrenv().delay,
+        getrenv().task.spawn,
+        getrenv().task.defer,
+        getrenv().task.delay,
+        getrenv().spawn
+    }
+
+    local function GenerateGUID(Info, Traceback)
+        local GUID = HttpService:GenerateGUID(false)
+
+        Stacks[GUID] = {Info, Traceback}
+
+        return GUID
+    end
+
     local function HookFunc(Func)
         local Old; Old = hookfunction(Func, function(...)
-            local Call = ...
+            local Call, Arguments = SortArguments(...)
     
             if type(Call) ~= "function" then
                 return Old(...)
             end
 
+<<<<<<< Updated upstream
             local Info, Traceback = GetCaller()
             Stacks[Call] = Traceback
             
@@ -201,6 +246,21 @@ if GetCallerV2 then
             if not Success then
                 Stacks[Call] = nil
             end
+=======
+            local Info, Traceback, Edited = GetCaller(), false
+
+            for i, v in next, Arguments do
+                if not IsNotTraceable[v] and i ~= 1 and not table.find(Hooks, v) then
+                    break;
+                elseif (i == 1 and table.find(Hooks, v)) or (i > 1 and IsNotTraceable[i - 1] and table.find(Hooks, v) then
+                    Edited = true
+                    table.insert(Arguments, Arguments[i + 1], GenerateGUID(Info, Traceback))
+                    continue;
+                end
+            end
+            
+            local Success, Response = Edited and SortArguments(pcall(Old, Call, unpack(Arguments))) or SortArguments(pcall(Old, ...))
+>>>>>>> Stashed changes
     
             return unpack(Response)
         end)
@@ -208,12 +268,13 @@ if GetCallerV2 then
 
     local function HookFuncThread(Func)
         local Old; Old = hookfunction(Func, function(...)
-            local Call = ...
+            local Call, Arguments = SortArguments(...)
     
             if type(Call) ~= "function" and type(Call) ~= "thread" then
                 return Old(...)
             end
     
+<<<<<<< Updated upstream
             local Info, Traceback = GetCaller()
             Stacks[Call] = Traceback
             
@@ -222,18 +283,32 @@ if GetCallerV2 then
             if not Success then
                 Stacks[Call] = nil
             end
+=======
+            local Info, Traceback, Edited = GetCaller(), false
+
+            for i, v in next, Arguments do
+                if (i == 1 and table.find(Hooks, v)) or (i > 1 and IsNotTraceable[i - 1] and table.find(Hooks, v) then
+                    Edited = true
+                    table.insert(Arguments, Arguments[i + 1], GenerateGUID(Info, Traceback))
+                    continue;
+                end
+            end
+            
+            local Success, Response = Edited and SortArguments(pcall(Old, Call, unpack(Arguments))) or SortArguments(pcall(Old, ...))
+>>>>>>> Stashed changes
     
             return unpack(Response)
         end)
     end
 
     local OldS; OldS = hookfunction(spawn, function(...)
-        local Call = ...
+        local Call, Arguments = SortArguments(...)
 
         if type(Call) ~= "function" and type(Call) ~= "thread" and (typeof(Call) ~= "userdata" and not getrawmetatable(Call).__call) then
             return OldS(...)
         end
 
+<<<<<<< Updated upstream
         local Info, Traceback = GetCaller()
         Stacks[Call] = Traceback
         
@@ -242,7 +317,20 @@ if GetCallerV2 then
         if not Success then
             Stacks[Call] = nil
         end
+=======
+        local Info, Traceback, Edited = GetCaller(), false
+>>>>>>> Stashed changes
 
+        for i, v in next, Arguments do
+            if (i == 1 and table.find(Hooks, v)) or (i > 1 and IsNotTraceable[i - 1] and table.find(Hooks, v) then
+                Edited = true
+                table.insert(Arguments, Arguments[i + 1], GenerateGUID(Info, Traceback))
+                continue;
+            end
+        end
+            
+        local Success, Response = Edited and SortArguments(pcall(OldS, Call, unpack(Arguments))) or SortArguments(pcall(OldS, ...))
+    
         return unpack(Response)
     end)
 
@@ -288,6 +376,8 @@ for Name, Method in next, Methods do
 
         return Original(...) --unpack(Response)
     end)
+
+    Hooks[Original] = Name
 end
 
 local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...)
