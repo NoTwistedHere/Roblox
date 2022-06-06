@@ -179,13 +179,8 @@ local GetCaller; GetCaller = function(Arguments)
             local NewInfo = FirstInfo or getinfo(i - 1)
             local ValidArgs = V2CheckArguments(Arguments)
             
-<<<<<<< Updated upstream
-            if GetCallerV2 and OldTraceback then
-                for _, v in next, OldTraceback do
-=======
             if GetCallerV2 and ValidArgs then
                 for _, v in next, ValidArgs[2] do
->>>>>>> Stashed changes
                     table.insert(Traceback, v)
                 end
                 NewInfo = ValidArgs[1]
@@ -237,22 +232,12 @@ if GetCallerV2 then
                 return Old(...)
             end
 
-<<<<<<< Updated upstream
-            local Info, Traceback = GetCaller()
-            Stacks[Call] = Traceback
-            
-            local Success, Response = SortArguments(pcall(Old, ...))
-    
-            if not Success then
-                Stacks[Call] = nil
-            end
-=======
             local Info, Traceback, Edited = GetCaller(), false
 
             for i, v in next, Arguments do
                 if not IsNotTraceable[v] and i ~= 1 and not table.find(Hooks, v) then
                     break;
-                elseif (i == 1 and table.find(Hooks, v)) or (i > 1 and IsNotTraceable[i - 1] and table.find(Hooks, v) then
+                elseif (i == 1 and table.find(Hooks, v)) or (i > 1 and IsNotTraceable[i - 1] and table.find(Hooks, v)) then
                     Edited = true
                     table.insert(Arguments, Arguments[i + 1], GenerateGUID(Info, Traceback))
                     continue;
@@ -260,7 +245,6 @@ if GetCallerV2 then
             end
             
             local Success, Response = Edited and SortArguments(pcall(Old, Call, unpack(Arguments))) or SortArguments(pcall(Old, ...))
->>>>>>> Stashed changes
     
             return unpack(Response)
         end)
@@ -274,20 +258,10 @@ if GetCallerV2 then
                 return Old(...)
             end
     
-<<<<<<< Updated upstream
-            local Info, Traceback = GetCaller()
-            Stacks[Call] = Traceback
-            
-            local Success, Response = SortArguments(pcall(Old, ...))
-
-            if not Success then
-                Stacks[Call] = nil
-            end
-=======
             local Info, Traceback, Edited = GetCaller(), false
 
             for i, v in next, Arguments do
-                if (i == 1 and table.find(Hooks, v)) or (i > 1 and IsNotTraceable[i - 1] and table.find(Hooks, v) then
+                if (i == 1 and table.find(Hooks, v)) or (i > 1 and IsNotTraceable[i - 1] and table.find(Hooks, v)) then
                     Edited = true
                     table.insert(Arguments, Arguments[i + 1], GenerateGUID(Info, Traceback))
                     continue;
@@ -295,7 +269,6 @@ if GetCallerV2 then
             end
             
             local Success, Response = Edited and SortArguments(pcall(Old, Call, unpack(Arguments))) or SortArguments(pcall(Old, ...))
->>>>>>> Stashed changes
     
             return unpack(Response)
         end)
@@ -308,21 +281,10 @@ if GetCallerV2 then
             return OldS(...)
         end
 
-<<<<<<< Updated upstream
-        local Info, Traceback = GetCaller()
-        Stacks[Call] = Traceback
-        
-        local Success, Response = SortArguments(pcall(OldS, ...))
-
-        if not Success then
-            Stacks[Call] = nil
-        end
-=======
         local Info, Traceback, Edited = GetCaller(), false
->>>>>>> Stashed changes
 
         for i, v in next, Arguments do
-            if (i == 1 and table.find(Hooks, v)) or (i > 1 and IsNotTraceable[i - 1] and table.find(Hooks, v) then
+            if (i == 1 and table.find(Hooks, v)) or (i > 1 and IsNotTraceable[i - 1] and table.find(Hooks, v)) then
                 Edited = true
                 table.insert(Arguments, Arguments[i + 1], GenerateGUID(Info, Traceback))
                 continue;
