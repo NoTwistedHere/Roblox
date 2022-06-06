@@ -152,6 +152,16 @@ local function ArgGuard(self, ...)
     return true
 end
 
+local function FixTable(Table)
+    local Yeah = {}
+
+    for i, v in next, Table do
+        table.insert(Yeah, v)
+    end
+
+    return Yeah
+end
+
 local function V2CheckArguments(Arguments)
     if type(Arguments) ~= "table" then
         return false
@@ -161,14 +171,17 @@ local function V2CheckArguments(Arguments)
 
     for i, v in next, Arguments do
         if type(v) == "string" and Stacks[v] then
-            print("wow")
             local Stack = Stacks[v]
+
+            print("wow", PrintTable(Stack))
             table.insert(Traceback, Stack[2])
             Info = Stack[1]
+
+            Arguments[i] = nil
         end
     end
 
-    return Info, Traceback
+    return Info, Traceback, FixTable(Arguments)
 end
 
 local GetCaller; GetCaller = function(...)
@@ -179,17 +192,21 @@ local GetCaller; GetCaller = function(...)
 
         if not Info then
             local NewInfo = FirstInfo or getinfo(i - 1)
-            local ValidArgs = V2CheckArguments(Arguments)
-            
+            local ValidArgs = {V2CheckArguments(Arguments)}
+
             if GetCallerV2 and ValidArgs then
+                warn(PrintTable(ValidArgs))
+
                 for _, v in next, ValidArgs[2] do
                     table.insert(Traceback, v)
                 end
                 
-                NewInfo = ValidArgs[1]
+                NewInfo = ValidArgs[1] or NewInfo
+
+                return NewInfo, Traceback, ValidArgs[3]
             end
             
-            return NewInfo, Traceback
+            return NewInfo, Traceback, Arguments
         end
         
         if Info.source ~= Source then
@@ -233,7 +250,7 @@ if GetCallerV2 then
                 return Old(...)
             end
 
-            local Info, Traceback, Edited = GetCaller(...), false
+            local Info, Traceback, Arguments, Edited = GetCaller(...), false
 
             if Hooks[Call] then
                 Edited = true
@@ -245,7 +262,7 @@ if GetCallerV2 then
                     break;
                 elseif Hooks[v] then
                     Edited = true
-                    table.insert(Arguments, Arguments[i + 1], GenerateGUID(Info, Traceback))
+                    table.insert(Arguments, i + 1, GenerateGUID(Info, Traceback))
                     Call = Arguments[i - 1] or Call
                     continue;
                 end
@@ -265,7 +282,7 @@ if GetCallerV2 then
                 return Old(...)
             end
     
-            local Info, Traceback, Arguments, Edited = GetCaller(...), false
+            local Info, Traceback, _Arguments, Edited = GetCaller(...), false
 
             if Hooks[Call] then
                 Edited = true
@@ -277,7 +294,7 @@ if GetCallerV2 then
                     break;
                 elseif Hooks[v] then
                     Edited = true
-                    table.insert(Arguments, Arguments[i + 1], GenerateGUID(Info, Traceback))
+                    table.insert(Arguments, i + 1, GenerateGUID(Info, Traceback))
                     Call = Arguments[i - 1] or Call
                     continue;
                 end
@@ -308,7 +325,7 @@ if GetCallerV2 then
                 break;
             elseif Hooks[v] then
                 Edited = true
-                table.insert(Arguments, Arguments[i + 1], GenerateGUID(Info, Traceback))
+                table.insert(Arguments, i + 1, GenerateGUID(Info, Traceback))
                 Call = Arguments[i - 1] or Call
                 continue;
             end
@@ -336,6 +353,8 @@ for Name, Method in next, Methods do
             local Thread = coroutine.running()
             local Info, Traceback, Arguments = GetCaller(...)
             local Method = Method.." (Raw)"
+
+            print("wowe", PrintTable({Info, Traceback, Arguments}))
 
             task.spawn(function(...)
                 local Success, Response = SortArguments(pcall(Original, unpack(Arguments)))
