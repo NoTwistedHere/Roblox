@@ -1,4 +1,4 @@
---// Report any issues/detections to me
+--// Report any bugs/detections to me
 
 if not PrintTable then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/PrintTable.luau"))()
