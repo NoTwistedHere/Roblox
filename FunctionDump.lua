@@ -27,7 +27,7 @@ local function Stringify(String)
         return;
     end
     
-    return ConvertCodepoints(String:gsub("\\", ""):gsub("\"", ""):gsub("\\(d+)", ""))
+    return ConvertCodepoints(String:gsub("\\", ""):gsub("//", ""):gsub("\"", ""):gsub("\\(d+)", ""))
 end
 
 local function GiveColour(Current, Max)
@@ -118,13 +118,11 @@ getgenv().DumpScripts = function()
         local Info = type(v) == "function" and islclosure(v) and not is_synapse_function(v) and getinfo(v)
 
         if Info then
-            Info.short_src = Stringify(Info.short_src)
-
-            if not Scripts[Info.short_src] then
-                Scripts[Info.short_src] = {}
+            if not Scripts[Info.source] then
+                Scripts[Info.source] = {}
             end
 
-            table.insert(Scripts[Info.short_src], {v, Info})
+            table.insert(Scripts[Info.source], {v, Info})
             ProgressBar(i, #GC)
         end
     end
@@ -137,7 +135,7 @@ getgenv().DumpScripts = function()
     local Count, ScriptsCount = 0, CountTable(Scripts)
 
     for Source, Dump in next, Scripts do
-        local Final = Directory..Source..".lua"
+        local Final = Directory..Stringify(Source)..".lua"
 
         Count += 1
         table.sort(Dump, function(a, b) return a[2].currentline < b[2].currentline end)
