@@ -162,6 +162,14 @@ local function FixTable(Table)
     return Yeah
 end
 
+local Old; Old = hookfunction(unpack, function(T, ...)
+    if not T then
+        warn(debug.traceback())
+    end
+
+    return Old(T, ...)
+end)
+
 local function V2CheckArguments(Arguments)
     if type(Arguments) ~= "table" then
         return false
@@ -173,8 +181,9 @@ local function V2CheckArguments(Arguments)
         if type(v) == "string" and Stacks[v] then
             local Stack = Stacks[v]
 
-            print("wow", PrintTable(Stack))
-            table.insert(Traceback, Stack[2])
+            for _, v2 in next, Stack[2] do
+                table.insert(Traceback, v2)
+            end
             Info = Stack[1]
 
             Arguments[i] = nil
@@ -184,26 +193,32 @@ local function V2CheckArguments(Arguments)
     return Info, Traceback, FixTable(Arguments)
 end
 
-local GetCaller; GetCaller = function(...)
+local function GetCaller(Yeah, ...)
     local Arguments = {...}
     local Traceback, FirstInfo = {};
+
     for i = 1, 16380 do
         local Info = isvalidlevel(i) and getinfo(i)
 
         if not Info then
             local NewInfo = FirstInfo or getinfo(i - 1)
-            local ValidArgs = {V2CheckArguments(Arguments)}
 
-            if GetCallerV2 and ValidArgs then
-                warn(PrintTable(ValidArgs))
+            if GetCallerV2 then
+                local ValidArgs = {V2CheckArguments(Arguments)}
 
-                for _, v in next, ValidArgs[2] do
-                    table.insert(Traceback, v)
+                if ValidArgs then
+                    for _i, v in next, ValidArgs[2] do
+                        if _i == 1 and Yeah then
+                            table.remove(ValidArgs[3], 1)
+                        end
+
+                        table.insert(Traceback, v)
+                    end
+                    
+                    NewInfo = ValidArgs[1] or NewInfo
+
+                    return NewInfo, Traceback, ValidArgs[3]
                 end
-                
-                NewInfo = ValidArgs[1] or NewInfo
-
-                return NewInfo, Traceback, ValidArgs[3]
             end
             
             return NewInfo, Traceback, Arguments
@@ -250,7 +265,7 @@ if GetCallerV2 then
                 return Old(...)
             end
 
-            local Info, Traceback, Arguments, Edited = GetCaller(...), false
+            local Info, Traceback, Arguments, Edited = GetCaller(true, ...), false
 
             if Hooks[Call] then
                 Edited = true
@@ -268,9 +283,11 @@ if GetCallerV2 then
                 end
             end
             
-            local Success, Response = Edited and SortArguments(pcall(Old, Call, unpack(Arguments))) or SortArguments(pcall(Old, ...))
+            if Edited then
+                return Old(Call, unpack(Arguments))
+            end
     
-            return unpack(Response)
+            return Old(...)
         end)
     end
 
@@ -282,7 +299,8 @@ if GetCallerV2 then
                 return Old(...)
             end
     
-            local Info, Traceback, _Arguments, Edited = GetCaller(...), false
+            local Info, Traceback, _Arguments = GetCaller(true, ...)
+            local Edited = false
 
             if Hooks[Call] then
                 Edited = true
@@ -299,10 +317,12 @@ if GetCallerV2 then
                     continue;
                 end
             end
-            
-            local Success, Response = Edited and SortArguments(pcall(Old, Call, unpack(Arguments))) or SortArguments(pcall(Old, ...))
+
+            if Edited then
+                return Old(Call, unpack(Arguments))
+            end
     
-            return unpack(Response)
+            return Old(...)
         end)
     end
 
@@ -313,7 +333,7 @@ if GetCallerV2 then
             return OldS(...)
         end
 
-        local Info, Traceback, Arguments, Edited = GetCaller(...), false
+        local Info, Traceback, Arguments, Edited = GetCaller(true, ...), false
 
         if Hooks[Call] then
             Edited = true
@@ -331,9 +351,11 @@ if GetCallerV2 then
             end
         end
             
-        local Success, Response = Edited and SortArguments(pcall(OldS, Call, unpack(Arguments))) or SortArguments(pcall(OldS, ...))
-    
-        return unpack(Response)
+        if Edited then
+            return Old(Call, unpack(Arguments))
+        end
+
+        return Old(...)
     end)
 
     HookFunc(getrenv().coroutine.create)
@@ -351,13 +373,16 @@ for Name, Method in next, Methods do
 
         if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and not Ignore(...) then
             local Thread = coroutine.running()
-            local Info, Traceback, Arguments = GetCaller(...)
+            local Info, Traceback, Arguments = GetCaller(false, ...)
             local Method = Method.." (Raw)"
 
-            print("wowe", PrintTable({Info, Traceback, Arguments}))
+            warn(PrintTable(Traceback), PrintTable(Arguments))
 
             task.spawn(function(...)
+                print(1)
                 local Success, Response = SortArguments(pcall(Original, unpack(Arguments)))
+
+                print(2, Success, PrintTable(Response))
 
                 if not Success then
                     return coroutine.resume(Thread, unpack(Response))
@@ -369,13 +394,15 @@ for Name, Method in next, Methods do
                     Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Traceback = Traceback})
                 end
 
+                print(3)
+
                 repeat
                     task.wait()
                 until coroutine.status(Thread) == "suspended"
-
-                warn(Response)
     
                 coroutine.resume(Thread, unpack(Response))
+
+                print(4)
             end, ...)
     
             return coroutine.yield()
@@ -393,7 +420,7 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
     
     if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and Methods[self.ClassName] == Method and not Ignore(...) then
         local Thread = coroutine.running()
-        local Info, Traceback, Arguments = GetCaller(...)
+        local Info, Traceback, Arguments = GetCaller(false, ...)
 
         task.spawn(function(...)
             setnamecallmethod(Method)
@@ -459,7 +486,7 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...
         local Name, ClassName = GetFullName(self), self.ClassName
         local Function = Arguments[2]
         local FunctionInfo = getinfo(Function)
-        local Info, Traceback = GetCaller(...)
+        local Info, Traceback = GetCaller(false, ...)
 
         return OldNewIndex(self, "OnClientInvoke", function(...)
             local Success, Response = SafeCall(Function, ...)
