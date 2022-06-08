@@ -31,7 +31,18 @@ local function Stringify(String)
         return;
     end
     
-    return ConvertCodepoints(String:gsub("\\", ""):gsub("//", ""):gsub("\"", ""):gsub("\\(d+)", ""))
+    --return ConvertCodepoints(String:gsub("\\", ""):gsub("//", ""):gsub("\"", ""):gsub("\\(d+)", ""))
+    local NewString, C = String:gsub("[^%w%s%.%(%)=]", ""), -1
+
+    repeat
+        NewString, C = NewString:gsub("%.%.", ".")
+    until C == 0
+
+    if #NewString == 0 then
+        return "INVALID NAME"
+    end
+
+    return NewString
 end
 
 local function GiveColour(Current, Max)
@@ -60,6 +71,10 @@ if not isfolder(Global) then
     makefolder(Global)
 end
 
+if isfolder(Global..Local) then
+    delfolder(Global..Local)
+end
+
 function Write(Function, Checked, NoWrite)
     local Checked, Upvalues, Constants, Protos, Info = Checked or {}, getupvalues(Function), getconstants(Function), getprotos(Function), getinfo(Function)
 
@@ -76,13 +91,27 @@ function Write(Function, Checked, NoWrite)
     return {Upvalues = Upvalues, Constants = Constants, LocalFunctions = Protos, Info = Info}
 end
 
-getgenv().DumpScript = function(Source)
-    local Functions, GC = {}, getgc()
-    local Final = Global..Local..Stringify(Source)..".lua"
+function CheckFile(Directory, FileName)
+    local Name, New, Count = "", Directory..Stringify(FileName..".lua"), 0
 
+    if isfile(New) then
+        repeat
+            Count += 1
+            Name = FileName..(" (%d)"):format(Count)
+            New = Directory..Stringify(Name..".lua")
+        until not isfile(Directory..Stringify(Name..".lua"))
+    end
+
+    return New
+end
+
+getgenv().DumpScript = function(Source)
     if not isfolder(Global..Local) then
         makefolder(Global..Local)
     end
+
+    local Functions, GC = {}, getgc()
+    local Final = CheckFile(Global..Local, Source)
 
     rconsoleclear()
     rconsolename("FunctionDumper")
@@ -115,12 +144,12 @@ getgenv().DumpScript = function(Source)
 end
 
 getgenv().DumpFunctions = function()
-    local Scripts, GC = {}, getgc()
-    local Directory = Global..Local
-
     if not isfolder(Global..Local) then
         makefolder(Global..Local)
     end
+
+    local Scripts, GC = {}, getgc()
+    local Directory = Global..Local
 
     rconsoleclear()
     rconsolename("FunctionDumper")
@@ -147,14 +176,14 @@ getgenv().DumpFunctions = function()
     local Count, ScriptsCount = 0, CountTable(Scripts)
 
     for Source, Dump in next, Scripts do
-        local Final = Directory..Stringify(Source)..".lua"
+        local Final = CheckFile(Directory, Source)
 
         Count += 1
         table.sort(Dump, function(a, b) return a[2].currentline < b[2].currentline end)
         writefile(Final, "")
 
         for _, Data in next, Dump do
-            appendfile(Final, PrintTable(Write(Data[1])))
+            appendfile(Final, PrintTable(Write(Data[1])).."\n")
         end
 
         ProgressBar(Count, ScriptsCount)

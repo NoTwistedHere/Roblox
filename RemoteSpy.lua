@@ -44,7 +44,7 @@ if not isfolder(Directory) then
     makefolder(Directory)
 end
 
-if isfile(FileName..FileType) then
+if isfile(Directory..FileName..FileType) then
     local Name, Count = "", 0
 
     repeat
