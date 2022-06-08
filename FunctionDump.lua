@@ -4,7 +4,8 @@ if not PrintTable then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/PrintTable.luau"))()
 end
 
-local Global, Local = "Garbage Logs/", game.PlaceId.."/"
+local Place = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
+local Global, Local = "Function Dumps/", ("%s [%d]/"):format(tostring(Place and Place.Name or "Unknown Game"):gsub("[^%w%s]", ""), Place.PlaceId)
 
 local function ConvertCodepoints(OriginalString)
     if OriginalString:match("[^%a%c%d%l%p%s%u%x]") or OriginalString:match("[\\/:*?\"<>|]") then
