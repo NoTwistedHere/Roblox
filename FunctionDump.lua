@@ -114,7 +114,7 @@ getgenv().DumpScript = function(Source)
     rconsoleprint("\nFinished")
 end
 
-getgenv().DumpScripts = function()
+getgenv().DumpFunctions = function()
     local Scripts, GC = {}, getgc()
     local Directory = Global..Local
 
