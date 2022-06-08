@@ -12,9 +12,9 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/
 ## <b>Example Usage:</b>
 ```lua
 DumpScript("=ReplicatedFirst.LocalScript")
-DumpScripts()
+DumpFunctions()
 ```
-Writes to `Garbage Logs/{PlaceId]}`
+Writes to `Garbage Logs/ {Name} [{PlaceId}]/`
 
 # PrintTable
 ```lua

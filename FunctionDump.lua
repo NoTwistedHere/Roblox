@@ -5,7 +5,7 @@ if not PrintTable then
 end
 
 local Place = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
-local Global, Local = "Function Dumps/", ("%s [%d]/"):format(tostring(Place and Place.Name or "Unknown Game"):gsub("[^%w%s]", ""), Place.PlaceId)
+local Global, Local = "Function Dumps/", ("%s [%d]/"):format(tostring(Place and Place.Name or "Unknown Game"):gsub("[^%w%s]", ""), game.PlaceId)
 
 local function ConvertCodepoints(OriginalString)
     if OriginalString:match("[^%a%c%d%l%p%s%u%x]") or OriginalString:match("[\\/:*?\"<>|]") then
@@ -31,7 +31,7 @@ local function Stringify(String)
         return;
     end
     
-    return ConvertCodepoints(String:gsub("\\", ""):gsub("\"", ""):gsub("\\(d+)", ""))
+    return ConvertCodepoints(String:gsub("\\", ""):gsub("//", ""):gsub("\"", ""):gsub("\\(d+)", ""))
 end
 
 local function GiveColour(Current, Max)
@@ -131,13 +131,11 @@ getgenv().DumpFunctions = function()
         local Info = type(v) == "function" and islclosure(v) and not is_synapse_function(v) and getinfo(v)
 
         if Info then
-            Info.short_src = Stringify(Info.short_src)
-
-            if not Scripts[Info.short_src] then
-                Scripts[Info.short_src] = {}
+            if not Scripts[Info.source] then
+                Scripts[Info.source] = {}
             end
 
-            table.insert(Scripts[Info.short_src], {v, Info})
+            table.insert(Scripts[Info.source], {v, Info})
             ProgressBar(i, #GC)
         end
     end
@@ -149,7 +147,7 @@ getgenv().DumpFunctions = function()
     local Count, ScriptsCount = 0, CountTable(Scripts)
 
     for Source, Dump in next, Scripts do
-        local Final = Directory..Source..".lua"
+        local Final = Directory..Stringify(Source)..".lua"
 
         Count += 1
         table.sort(Dump, function(a, b) return a[2].currentline < b[2].currentline end)
