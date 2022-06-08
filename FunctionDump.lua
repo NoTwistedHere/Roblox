@@ -71,10 +71,6 @@ if not isfolder(Global) then
     makefolder(Global)
 end
 
-if isfolder(Global..Local) then
-    delfolder(Global..Local)
-end
-
 function Write(Function, Checked, NoWrite)
     local Checked, Upvalues, Constants, Protos, Info = Checked or {}, getupvalues(Function), getconstants(Function), getprotos(Function), getinfo(Function)
 
@@ -108,6 +104,8 @@ end
 getgenv().DumpScript = function(Source)
     if not isfolder(Global..Local) then
         makefolder(Global..Local)
+    elseif isfolder(Global..Local) then
+        delfolder(Global..Local)
     end
 
     local Functions, GC = {}, getgc()
@@ -146,6 +144,8 @@ end
 getgenv().DumpFunctions = function()
     if not isfolder(Global..Local) then
         makefolder(Global..Local)
+    elseif isfolder(Global..Local) then
+        delfolder(Global..Local)
     end
 
     local Scripts, GC = {}, getgc()
