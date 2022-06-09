@@ -230,6 +230,10 @@ local function SortArguments(self, ...)
     return self, {...}
 end
 
+local function IsValidMethod(ClassName, Method)
+    return Methods[ClassName] == Method:sub(1, 1):upper()..Method:sub(2, #Method)
+end
+
 if GetCallerV2 then
     local IsNotTraceable = {
         getrenv().coroutine.create,
@@ -401,7 +405,7 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
     local self, Arguments = SortArguments(...)
     local Method = getnamecallmethod()
     
-    if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and Methods[self.ClassName] == Method and not Ignore(...) then
+    if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and IsValidMethod(self.ClassName, Method) and not Ignore(...) then
         local Thread = coroutine.running()
         local Info, Traceback, Arguments = GetCaller(false, ...)
 
