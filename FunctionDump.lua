@@ -88,7 +88,9 @@ local function ProgressBar(Header, Thread, Current, Max)
         end
     end)
 
-    return Update
+    return function(...)
+        task.spawn(Update, ...)
+    end
 end
 
 local function CountTable(Table)
@@ -160,7 +162,7 @@ getgenv().DumpScript = function(Source)
     end
 
     CPB(1, 1)
-    local CPB = ProgressBar("Dumping Functions", Thread, 0, 1)
+    local CPB = ProgressBar(("Dumping Functions [%d]"):format(#Functions), Thread, 0, 1)
 
     table.sort(Functions, function(a, b) return a[2].currentline < b[2].currentline end)
 
@@ -203,26 +205,46 @@ getgenv().DumpFunctions = function()
     end
 
     CPB(1, 1)
-    local CPB = ProgressBar("Dumping Functions", Thread, 0, 1)
+    local CPB = ProgressBar(("Dumping Functions [%d]"):format(TotalFunctions), Thread, 0, 1)
 
-    local Count, ScriptsCount = 0, CountTable(Scripts)
+    local Count = 0
 
     for Source, Dump in next, Scripts do
-        local Final = CheckFile(Directory, Source)
+        local Final, FThreads, FYield = CheckFile(Directory, Source), 0, coroutine.running()
 
         table.sort(Dump, function(a, b) return a[2].currentline < b[2].currentline end)
         writefile(Final, "")
 
-        for i, Data in next, Dump do
-            Count += 1
-            appendfile(Final, PrintTable(Write(Data[1])).."\n")
-            
-            if i % 150 == 0 then
-                CPB(Count, TotalFunctions)
-            end
+        for ThreadNum = 0, math.ceil(#Dump / 200) - 1 do
+            FThreads += 1
+            task.spawn(function()
+                for TIndex = 1, 200 do
+                    local Data = Dump[TIndex + (200 * ThreadNum)]
+
+                    if not Data then
+                        break;
+                    end
+
+                    appendfile(Final, PrintTable(Write(Data[1])).."\n")
+                    Count += 1
+                    CPB(Count, TotalFunctions)
+                end
+
+                FThreads -= 1
+
+                if FThreads == 0 then
+                    if coroutine.status(FYield) ~= "suspended" then
+                        repeat
+                            task.wait()
+                        until coroutine.status(FYield) == "suspended"
+                    end
+
+                    return coroutine.resume(FYield)
+                end
+            end)
         end
 
-        CPB(Count, TotalFunctions)
+        coroutine.yield()
     end
 
     rconsoleprint("Finished")

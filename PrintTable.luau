@@ -183,55 +183,98 @@ local function CheckForClone(Checked, Table)
     return false
 end
 
-_PrintTable = function(Table, Indents, Checked, Root)
-    local Thread = coroutine.running()
+local function IncrementalRepeat(ToRepeat, Repeat, Increment)
+    local Final = ""
 
-    task.spawn(function()
-        local TableCount, TabWidth, Result, Count = CountTable(Table), "    ", "", 1
-        local Metatable = getrawmetatable(Table)
+    for i = 1, Repeat do
+        Final ..= ToRepeat .. (Increment and i or "") .. (i == Repeat and "" or ", ")
+    end
 
-        Root = Root or "Table"
-        Checked = Checked or {}
-        Indents = Indents or 1
-        Checked[Table] = TableCount
+    return Final
+end
 
-        --[[if #Table > 500 then
-            if LargeTables then
-            end
+local function YieldableFunc(OriginalFunction)
+    local NoUV = #getupvalues(OriginalFunction) + 1
+    local Variables, Values = IncrementalRepeat("_", NoUV, true), IncrementalRepeat("game", NoUV)
+    local New = loadstring(([[
+        local %s = %s
 
-            return "Large Tables are disabled"
-        end]]
+        return function()
+            return %s
+        end]]):format(Variables, Values, Variables))()
 
-        for i, v in pairs(Table) do
-            local NewRoot = Root..("[%s]"):format(Stringify(i))
-            local AlreadyLogged = type(v) == "table" and (Checked[v] or CheckForClone(Checked, v))
+    hookfunction(New, OriginalFunction)
+    return New
+end
 
-            if AlreadyLogged then
-                Result ..= ("%s[%s] = %s%s%s\n"):format(string.rep(TabWidth, Indents), ParseObject(i, false, false, Checked, NewRoot), Tostring(v), Count < TableCount and "," or "", Checked[v] and "" or " --// Duplicate of "..Tostring(AlreadyLogged))
+local _PrintTable; _PrintTable = YieldableFunc(function(Table, Indents, Checked, Root)
+    local TableCount, TabWidth, Count = CountTable(Table), "    ", 1
+    local Metatable = getrawmetatable(Table)
+
+    Root = Root or "Table"
+    Checked = Checked or {}
+    Indents = Indents or 1
+    Checked[Table] = TableCount
+
+    if TableCount >= 3e3 then
+        return "{ \"Table is too large\" }; --// Max: 5e3"
+    elseif TableCount == 0 then
+        return "{}"
+    end
+
+    local NewTable, Results, Threads, Yield = {}, {}, 0, coroutine.running()
+
+    for i, v in next, Table do
+        table.insert(NewTable, {i, v})
+    end
+
+    for ThreadNum = 0, math.ceil(TableCount / 200) - 1 do
+        Threads += 1
+
+        task.spawn(function()
+            for TIndex = 1, 200 do
+                local Data = NewTable[TIndex + (200 * ThreadNum)]
+
+                if not Data then
+                    break;
+                end
+
+                local Index, Value = Data[1], Data[2]
+
+                local NewRoot = Root..("[%s]"):format(Stringify(Index))
+                local AlreadyLogged = type(Value) == "table" and (Checked[Value] or CheckForClone(Checked, Value))
+
+                if AlreadyLogged then
+                    Results[TIndex] = ("%s[%s] = %s%s%s"):format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot), Tostring(Value), Count < TableCount and "," or "", Checked[Value] and "" or " --// Duplicate of "..Tostring(AlreadyLogged))
+                    Count += 1
+                    continue;
+                end
+
+                local IsValid = type(Value) == "table" and not Checked[Value]
+                local Parsed = {ParseObject(Value, true, true, Checked, NewRoot)}
+                local ParsedValue = IsValid and _PrintTable(Value, Indents + 1, Checked, NewRoot) or Parsed[1]
+                local Comment = (IsValid and Parsed[1]..(Parsed[2] and " " or "") or "") .. (Parsed[2] and Parsed[2] or "")
+
+                Results[TIndex] = ("%s[%s] = %s%s%s"):format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot), ParsedValue, Count < TableCount and "," or "", #Comment > 0 and " --// " .. Comment or "")
                 Count += 1
-                continue;
             end
 
-            local IsValid = type(v) == "table" and not Checked[v]
-            local Parsed = {ParseObject(v, true, true, Checked, NewRoot)}
-            local Value = IsValid and _PrintTable(v, Indents + 1, Checked, NewRoot) or Parsed[1]
-            local Comment = (IsValid and Parsed[1]..(Parsed[2] and " " or "") or "") .. (Parsed[2] and Parsed[2] or "")
+            Threads -= 1
 
-            Result ..= ("%s[%s] = %s%s%s\n"):format(string.rep(TabWidth, Indents), ParseObject(i, false, false, Checked, NewRoot), Value, Count < TableCount and "," or "", #Comment > 0 and " --// " .. Comment or "")
-            Count += 1
-        end
+            if Threads == 0 then
+                if coroutine.status(Yield) ~= "suspended" then
+                    repeat
+                        task.wait()
+                    until coroutine.status(Yield) == "suspended"
+                end
 
-        if coroutine.status(Thread) ~= "suspended" then
-            repeat
-                task.wait()
-            until coroutine.status(Thread) == "suspended"
-        end
-
-        return coroutine.resume(Thread, (Metatable and "setmetatable(%s, %s)" or "%s"):format(TableCount == 0 and "{}" or ("{\n%s%s}"):format(Result, string.rep(TabWidth, Indents - 1)), Metatable and _PrintTable(Metatable, Indents, Checked)))
-    end)
+                coroutine.resume(Yield, (Metatable and "setmetatable(%s, %s)" or "%s"):format(TableCount == 0 and "{}" or ("{\n%s\n%s}"):format(table.concat(Results, "\n"), string.rep(TabWidth, Indents - 1)), Metatable and _PrintTable(Metatable, Indents, Checked)))
+            end
+        end)
+    end
 
     return coroutine.yield()
-end
+end)
 
 getgenv().PrintTable = function(Table)
     local Type = typeof(Table)
