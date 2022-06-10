@@ -407,7 +407,7 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
     
     if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and IsValidMethod(self.ClassName, Method) and not Ignore(...) then
         local Thread = coroutine.running()
-        local Info, Traceback, Arguments = GetCaller(false, ...)
+        local Info, Traceback, Arguments = GetCaller(false, unpack(Arguments))
 
         task.spawn(function(...)
             setnamecallmethod(Method)
