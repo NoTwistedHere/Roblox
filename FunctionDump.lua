@@ -1,5 +1,3 @@
---// I love branches
-
 if not PrintTable then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/PrintTable.luau"))()
 end
@@ -49,12 +47,48 @@ local function GiveColour(Current, Max)
     return (Current < Max * 0.25 and "@@RED@@") or (Current < Max * 0.5 and "@@YELLOW@@") or (Current < Max * 0.75 and "@@CYAN@@") or "@@GREEN@@"
 end
 
-local function ProgressBar(Current, Max)
-    local Size = 100
-    local Progress, Percentage = math.floor(Size * Current / Max), math.floor(100 * Current / Max)
-    rconsoleprint(GiveColour(Current, Max))
-    rconsoleprint(("\13%s%s %s"):format(("#"):rep(Progress), ("."):rep(Size - Progress), Percentage.."%"))
-    rconsoleprint("@@WHITE@@")
+local function GetLoading()
+    local SpinnerCount = 0
+
+    return function()
+        local Chars = { "|", "/", "—", "\\" }
+
+        SpinnerCount += 1
+
+        if SpinnerCount > #Chars then
+            SpinnerCount = 1
+        end
+
+        return " "..Chars[SpinnerCount]
+    end
+end
+
+local function ProgressBar(Header, Thread, Current, Max)
+    local Size, PreviousCur, PreviousMax = 80, Current, Max
+    local Loading = GetLoading()
+    local LoadingChar = Loading()
+
+    local function Update(Current, Max, Extra_After)
+        local Progress, Percentage = math.floor(Size * Current / Max), math.floor(100 * Current / Max)
+
+        PreviousCur = Current
+        PreviousMax = Max
+        rconsoleprint(GiveColour(Current, Max))
+        rconsoleprint(("\13%s%s %s%s"):format(("#"):rep(Progress), ("."):rep(Size - Progress), Percentage.."%", Percentage == 100 and "!\n" or Extra_After or LoadingChar))
+        rconsoleprint("@@WHITE@@")
+    end
+
+    rconsoleprint(Header.."\n")
+
+    task.spawn(function()
+        while PreviousCur < PreviousMax and coroutine.status(Thread) ~= "dead" do
+            LoadingChar = Loading()
+            Update(PreviousCur, PreviousMax, LoadingChar)
+            task.wait(0.5)
+        end
+    end)
+
+    return Update
 end
 
 local function CountTable(Table)
@@ -108,13 +142,12 @@ getgenv().DumpScript = function(Source)
         delfolder(Global..Local)
     end
 
-    local Functions, GC = {}, getgc()
+    local Functions, GC, Thread = {}, getgc(), coroutine.running()
     local Final = CheckFile(Global..Local, Source)
 
     rconsoleclear()
     rconsolename("FunctionDumper")
-    rconsoleprint("Collecting Functions\n")
-    ProgressBar(0, #GC)
+    local CPB = ProgressBar("Collecting Functions", Thread, 0, 1)
     writefile(Final, "")
 
     for i, v in next, getgc() do
@@ -122,20 +155,19 @@ getgenv().DumpScript = function(Source)
 
         if Info and Info.source == Source then
             table.insert(Functions, {v, Info})
-            ProgressBar(i, #GC)
+            CPB(i, #GC)
         end
     end
 
-    ProgressBar(1, 1)
-    rconsoleprint("\nDumping Functions\n")
-    ProgressBar(0, #Functions)
+    CPB(1, 1)
+    local CPB = ProgressBar("Dumping Functions", Thread, 0, 1)
 
     table.sort(Functions, function(a, b) return a[2].currentline < b[2].currentline end)
 
     for i, Data in next, Functions do
         appendfile(File, PrintTable(Write(Data[1])))
 
-        ProgressBar(i, #Functions)
+        CPB(i, #Functions)
     end
 
     rconsoleprint("\nFinished")
@@ -146,15 +178,15 @@ getgenv().DumpFunctions = function()
         makefolder(Global..Local)
     elseif isfolder(Global..Local) then
         delfolder(Global..Local)
+        makefolder(Global..Local)
     end
 
-    local Scripts, GC = {}, getgc()
+    local Scripts, GC, TotalFunctions, Thread = {}, getgc(), 0, coroutine.running()
     local Directory = Global..Local
 
     rconsoleclear()
     rconsolename("FunctionDumper")
-    rconsoleprint("Collecting Functions\n")
-    ProgressBar(0, #GC)
+    local CPB = ProgressBar("Collecting Functions", Thread, 0, 1)
 
     for i, v in next, GC do
         local Info = type(v) == "function" and islclosure(v) and not is_synapse_function(v) and getinfo(v)
@@ -164,30 +196,34 @@ getgenv().DumpFunctions = function()
                 Scripts[Info.source] = {}
             end
 
+            TotalFunctions += 1
             table.insert(Scripts[Info.source], {v, Info})
-            ProgressBar(i, #GC)
+            CPB(i, #GC)
         end
     end
 
-    ProgressBar(1, 1)
-    rconsoleprint("\nDumping Functions\n")
-    ProgressBar(0, #Scripts)
+    CPB(1, 1)
+    local CPB = ProgressBar("Dumping Functions", Thread, 0, 1)
 
     local Count, ScriptsCount = 0, CountTable(Scripts)
 
     for Source, Dump in next, Scripts do
         local Final = CheckFile(Directory, Source)
 
-        Count += 1
         table.sort(Dump, function(a, b) return a[2].currentline < b[2].currentline end)
         writefile(Final, "")
 
-        for _, Data in next, Dump do
+        for i, Data in next, Dump do
+            Count += 1
             appendfile(Final, PrintTable(Write(Data[1])).."\n")
+            
+            if i % 150 == 0 then
+                CPB(Count, TotalFunctions)
+            end
         end
 
-        ProgressBar(Count, ScriptsCount)
+        CPB(Count, TotalFunctions)
     end
 
-    rconsoleprint("\nFinished")
+    rconsoleprint("Finished")
 end

@@ -155,36 +155,89 @@ local function ParseObject(Object, DetailedInfo, TypeOf, Checked, Root)
     return Parsed[1], (TypeOf and ("[%s]"):format(Type) or "") .. (DetailedInfo and unpack(Parsed, 2) or "")
 end
 
-_PrintTable = function(Table, Indents, Checked, Root)
-    local TableCount, TabWidth, Result, Count = CountTable(Table), "    ", "", 1
-    local Metatable = getrawmetatable(Table)
+local function CheckForClone(Checked, Table)
+    local TC = CountTable(Table)
 
-    Root = Root or "Table"
-    Checked = Checked or {}
-    Indents = Indents or 1
-    Checked[Table] = true
-
-    --Sort(Table)
-
-    for i, v in pairs(Table) do
-        local NewRoot = Root..("[%s]"):format(Stringify(i))
-        local IsValid = type(v) == "table" and not Checked[v]
-        local Parsed = {ParseObject(v, true, true, Checked, NewRoot)}
-        local Value = IsValid and _PrintTable(v, Indents + 1, Checked, NewRoot) or Parsed[1]
-        local Comment = (IsValid and Parsed[1]..(Parsed[2] and " " or "") or "") .. (Parsed[2] and Parsed[2] or "")
-
-        Result ..= ("%s[%s] = %s%s%s\n"):format(string.rep(TabWidth, Indents), ParseObject(i, false, false, Checked, NewRoot), Value, Count < TableCount and "," or "", #Comment > 0 and " --// " .. Comment or "")
-        Count += 1
+    if TC <= 3 then
+        return false
     end
 
-    return (Metatable and "setmetatable(%s, %s)" or "%s"):format(TableCount == 0 and "{}" or ("{\n%s%s}"):format(Result, string.rep(TabWidth, Indents - 1)), Metatable and _PrintTable(Metatable, Indents, Checked))
+    for Value, Count in next, Checked do
+        if type(Value) == "table" and Count <= 3 or Count ~= TC then
+            continue;
+        end
+        
+        local MatchedCount = 0
+
+        for Index, Value2 in next, Table do
+            if rawget(Value, Index) == Value2 then
+                MatchedCount += 1
+            end
+        end
+
+        if MatchedCount == Count then
+            return i
+        end
+    end
+
+    return false
 end
 
-getgenv().PrintTable = newcclosure(function(Table)
+_PrintTable = function(Table, Indents, Checked, Root)
+    local Thread = coroutine.running()
+
+    task.spawn(function()
+        local TableCount, TabWidth, Result, Count = CountTable(Table), "    ", "", 1
+        local Metatable = getrawmetatable(Table)
+
+        Root = Root or "Table"
+        Checked = Checked or {}
+        Indents = Indents or 1
+        Checked[Table] = TableCount
+
+        --[[if #Table > 500 then
+            if LargeTables then
+            end
+
+            return "Large Tables are disabled"
+        end]]
+
+        for i, v in pairs(Table) do
+            local NewRoot = Root..("[%s]"):format(Stringify(i))
+            local AlreadyLogged = type(v) == "table" and (Checked[v] or CheckForClone(Checked, v))
+
+            if AlreadyLogged then
+                Result ..= ("%s[%s] = %s%s%s\n"):format(string.rep(TabWidth, Indents), ParseObject(i, false, false, Checked, NewRoot), Tostring(v), Count < TableCount and "," or "", Checked[v] and "" or " --// Duplicate of "..Tostring(AlreadyLogged))
+                Count += 1
+                continue;
+            end
+
+            local IsValid = type(v) == "table" and not Checked[v]
+            local Parsed = {ParseObject(v, true, true, Checked, NewRoot)}
+            local Value = IsValid and _PrintTable(v, Indents + 1, Checked, NewRoot) or Parsed[1]
+            local Comment = (IsValid and Parsed[1]..(Parsed[2] and " " or "") or "") .. (Parsed[2] and Parsed[2] or "")
+
+            Result ..= ("%s[%s] = %s%s%s\n"):format(string.rep(TabWidth, Indents), ParseObject(i, false, false, Checked, NewRoot), Value, Count < TableCount and "," or "", #Comment > 0 and " --// " .. Comment or "")
+            Count += 1
+        end
+
+        if coroutine.status(Thread) ~= "suspended" then
+            repeat
+                task.wait()
+            until coroutine.status(Thread) == "suspended"
+        end
+
+        return coroutine.resume(Thread, (Metatable and "setmetatable(%s, %s)" or "%s"):format(TableCount == 0 and "{}" or ("{\n%s%s}"):format(Result, string.rep(TabWidth, Indents - 1)), Metatable and _PrintTable(Metatable, Indents, Checked)))
+    end)
+
+    return coroutine.yield()
+end
+
+getgenv().PrintTable = function(Table)
     local Type = typeof(Table)
     assert((Type == "table" or Type == "userdata"), "PrintTable: Invalid Argument #1 (table or userdata expected)")
 
     local Success, Response = pcall(_PrintTable, Table)
 
     return (Success and Response) or ("PrintTable: \"%s\""):format(Response)
-end)
+end
