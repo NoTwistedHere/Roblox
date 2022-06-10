@@ -411,7 +411,7 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
 
         task.spawn(function(...)
             setnamecallmethod(Method)
-            local Success, Response = SortArguments(pcall(OldNamecall, unpack(Arguments)))
+            local Success, Response = SortArguments(pcall(OldNamecall, self, unpack(Arguments)))
 
             if not Success then
                 return coroutine.resume(Thread, unpack(Response))
