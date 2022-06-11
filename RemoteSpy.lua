@@ -267,16 +267,16 @@ if GetCallerV2 then
             end
 
             for i, v in next, Arguments do
-                if not IsNotTraceable[v] or not Hooks[v] then
+                if not IsNotTraceable[v] and not Hooks[v] and not Stacks[v] then
                     break;
                 elseif Hooks[v] then
                     Edited = true
                     table.insert(Arguments, i + 1, GenerateGUID(Info, Traceback))
-                    Call = Arguments[i - 1] or Call
+                    --Call = Arguments[i - 1] or Call
                     continue;
                 end
             end
-            
+
             if Edited then
                 return Old(Call, unpack(Arguments))
             end
@@ -335,18 +335,18 @@ if GetCallerV2 then
         end
 
         for i, v in next, Arguments do
-            if not IsNotTraceable[v] or not Hooks[v] then
+            if not IsNotTraceable[v] and not Hooks[v] and not Stacks[v] then
                 break;
             elseif Hooks[v] then
                 Edited = true
                 table.insert(Arguments, i + 1, GenerateGUID(Info, Traceback))
-                Call = Arguments[i - 1] or Call
+                --Call = Arguments[i - 1] or Call
                 continue;
             end
         end
-            
+
         if Edited then
-            return Old(Call, unpack(Arguments))
+            return OldS(Call, unpack(Arguments))
         end
 
         return Old(...)
