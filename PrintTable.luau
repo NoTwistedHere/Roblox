@@ -219,7 +219,7 @@ local _PrintTable; _PrintTable = YieldableFunc(function(Table, Indents, Checked,
     if TableCount >= 3e3 then
         return "{ \"Table is too large\" }; --// Max: 5e3"
     elseif TableCount == 0 then
-        return "{}"
+        return (Metatable and "setmetatable(%s, %s)" or "%s"):format("{}", Metatable and _PrintTable(Metatable, Indents, Checked))
     end
 
     local NewTable, Results, Threads, Yield = {}, {}, 0, coroutine.running()
