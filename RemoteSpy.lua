@@ -253,47 +253,15 @@ if GetCallerV2 then
 
     local function HookFunc(Func)
         local Old; Old = hookfunction(Func, function(...)
-            local Call, Arguments = SortArguments(...)
+            local _Args = {...}
+            local Arguments = GetCallerV2 and V2CheckArguments(_Args)[3] or _Args
+            local Call = table.remove(Arguments, 1)
     
             if type(Call) ~= "function" then
                 return Old(...)
             end
 
-            local Info, Traceback, Arguments, Edited = GetCaller(Arguments), false
-
-            if Hooks[Call] then
-                Edited = true
-                table.insert(Arguments, 2, GenerateGUID(Info, Traceback))
-            end
-
-            for i, v in next, Arguments do
-                if not IsNotTraceable[v] and not Hooks[v] and not Stacks[v] then
-                    break;
-                elseif Hooks[v] then
-                    Edited = true
-                    table.insert(Arguments, i + 1, GenerateGUID(Info, Traceback))
-                    --Call = Arguments[i - 1] or Call
-                    continue;
-                end
-            end
-
-            if Edited then
-                return Old(Call, unpack(Arguments))
-            end
-    
-            return Old(...)
-        end)
-    end
-
-    local function HookFuncThread(Func)
-        local Old; Old = hookfunction(Func, function(...)
-            local Call, Arguments = SortArguments(...)
-    
-            if type(Call) ~= "function" and type(Call) ~= "thread" then
-                return Old(...)
-            end
-    
-            local Info, Traceback, Arguments = GetCaller(Arguments)
+            local Info, Traceback, Arguments = GetCaller({...})
             local Edited = false
 
             if Hooks[Call] then
@@ -316,18 +284,58 @@ if GetCallerV2 then
                 return Old(Call, unpack(Arguments))
             end
     
-            return Old(...)
+            return Old(Call, unpack(Arguments))
+        end)
+    end
+
+    local function HookFuncThread(Func)
+        local Old; Old = hookfunction(Func, function(...)
+            local _Args = {...}
+            local Arguments = GetCallerV2 and V2CheckArguments(_Args)[3] or _Args
+            local Call = table.remove(Arguments, 1)
+    
+            if type(Call) ~= "function" and type(Call) ~= "thread" then
+                return Old(...)
+            end
+    
+            local Info, Traceback, Arguments = GetCaller({...})
+            local Edited = false
+
+            if Hooks[Call] then
+                Edited = true
+                table.insert(Arguments, 2, GenerateGUID(Info, Traceback))
+            end
+
+            for i, v in next, Arguments do
+                if not IsNotTraceable[v] and not Hooks[v] and not Stacks[v] then
+                    break;
+                elseif Hooks[v] then
+                    Edited = true
+                    table.insert(Arguments, i + 1, GenerateGUID(Info, Traceback))
+                    --Call = Arguments[i - 1] or Call
+                    continue;
+                end
+            end
+
+            if Edited then
+                return Old(Call, unpack(Arguments))
+            end
+    
+            return Old(Call, unpack(Arguments))
         end)
     end
 
     local OldS; OldS = hookfunction(spawn, function(...)
-        local Call, Arguments = SortArguments(...)
+        local _Args = {...}
+        local Arguments = GetCallerV2 and V2CheckArguments(_Args)[3] or _Args
+        local Call = table.remove(Arguments, 1)
 
         if type(Call) ~= "function" and type(Call) ~= "thread" and (typeof(Call) ~= "userdata" and not getrawmetatable(Call).__call) then
-            return OldS(...)
+            return OldS(Call, unpack(Arguments))
         end
 
-        local Info, Traceback, Arguments, Edited = GetCaller(Arguments), false
+        local Info, Traceback, Arguments = GetCaller({...})
+        local Edited = false
 
         if Hooks[Call] then
             Edited = true
@@ -349,7 +357,7 @@ if GetCallerV2 then
             return OldS(Call, unpack(Arguments))
         end
 
-        return Old(...)
+        return OldS(Call, unpack(Arguments))
     end)
 
     HookFunc(getrenv().coroutine.create)
