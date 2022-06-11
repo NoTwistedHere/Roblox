@@ -464,7 +464,7 @@ local function IsValid(Parsed, Checked)
 end
 
 local function IsValidIndex(Index)
-    return Index == "OnClientInvoke" or Index == "onClientInvoke"
+    return rawequal(Index, "OnClientInvoke") or rawequal(Index, "onClientInvoke")
 end
 
 local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...)
