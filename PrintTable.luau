@@ -90,15 +90,11 @@ local function Tostring(Object)
     if Metatable and rawget(Metatable, "__tostring") then
         local Old, IsReadOnly, Response = rawget(Metatable, "__tostring"), isreadonly(Metatable);
 
-        if type(Old) ~= "function" or islclosure(Old) then
-            setreadonly(Metatable, false)
-            rawset(Metatable, "__tostring", nil)
-            Response = tostring(Object)
-            rawset(Metatable, "__tostring", Old)
-            setreadonly(Metatable, IsReadOnly)
-        else
-            Response = tostring(Object)
-        end
+        setreadonly(Metatable, false)
+        rawset(Metatable, "__tostring", nil)
+        Response = tostring(Object)
+        rawset(Metatable, "__tostring", Old)
+        setreadonly(Metatable, IsReadOnly)
 
         return Response, " [Metatable]"
     end
@@ -170,7 +166,7 @@ local function CheckForClone(Checked, Table)
         local MatchedCount = 0
 
         for Index, Value2 in next, Table do
-            if rawget(Value, Index) == Value2 then
+            if rawequal(rawget(Value, Index), Value2) then
                 MatchedCount += 1
             end
         end
@@ -208,8 +204,8 @@ local function YieldableFunc(OriginalFunction)
 end
 
 local _PrintTable; _PrintTable = YieldableFunc(function(Table, Indents, Checked, Root)
-    local TableCount, TabWidth, Count = CountTable(Table), "    ", 1
-    local Metatable = getrawmetatable(Table)
+    local Metatable, IsProxy = getrawmetatable(Table), typeof(Table) == "userdata"
+    local TableCount, TabWidth, Count = IsProxy and 0 or CountTable(Table), "    ", 1
 
     Root = Root or "Table"
     Checked = Checked or {}
@@ -218,6 +214,8 @@ local _PrintTable; _PrintTable = YieldableFunc(function(Table, Indents, Checked,
 
     if TableCount >= 3e3 then
         return "{ \"Table is too large\" }; --// Max: 5e3"
+    elseif IsProxy then
+        return (Metatable and "setmetatable(%s, %s)" or "%s"):format(Tostring(Table), Metatable and _PrintTable(Metatable, Indents, Checked))
     elseif TableCount == 0 then
         return (Metatable and "setmetatable(%s, %s)" or "%s"):format("{}", Metatable and _PrintTable(Metatable, Indents, Checked))
     end
@@ -250,7 +248,7 @@ local _PrintTable; _PrintTable = YieldableFunc(function(Table, Indents, Checked,
                     continue;
                 end
 
-                local IsValid = type(Value) == "table" and not Checked[Value]
+                local IsValid = (type(Value) == "table" or typeof(Value) == "userdata") and not Checked[Value]
                 local Parsed = {ParseObject(Value, true, true, Checked, NewRoot)}
                 local ParsedValue = IsValid and _PrintTable(Value, Indents + 1, Checked, NewRoot) or Parsed[1]
                 local Comment = (IsValid and Parsed[1]..(Parsed[2] and " " or "") or "") .. (Parsed[2] and Parsed[2] or "")
