@@ -6,7 +6,7 @@ end
 
 getgenv().WriteToFile = WriteToFile or false
 getgenv().RobloxConsole = RobloxConsole or false
-getgenv().GetCallerV2 = GetCallerV2 or false
+getgenv().GetCallerV2 = GetCallerV2 or false --// BETA
 getgenv().RemoteSpyEnabled = RemoteSpyEnabled or true
 getgenv().Enabled = Enabled or {
     BindableEvent = false;
