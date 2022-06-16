@@ -137,6 +137,16 @@ function CheckFile(Directory, FileName)
     return New
 end
 
+local function Get(Table)
+    local Final = ""
+    
+    for i, v in pairs(Table) do
+        Final ..= v
+    end
+
+    return Final
+end
+
 getgenv().DumpScript = function(Source)
     if not isfolder(Global..Local) then
         makefolder(Global..Local)
@@ -210,22 +220,21 @@ getgenv().DumpFunctions = function()
     local Count = 0
 
     for Source, Dump in next, Scripts do
-        local Final, FThreads, FYield = CheckFile(Directory, Source), 0, coroutine.running()
+        local Final, FThreads, FYield, FinalData = CheckFile(Directory, Source), 0, coroutine.running(), {}
 
         table.sort(Dump, function(a, b) return a[2].currentline < b[2].currentline end)
-        writefile(Final, "")
 
         for ThreadNum = 0, math.ceil(#Dump / 200) - 1 do
             FThreads += 1
             task.spawn(function()
-                for TIndex = 1, 200 do
+                for TIndex = 1, 201 do
                     local Data = Dump[TIndex + (200 * ThreadNum)]
 
                     if not Data then
                         break;
                     end
 
-                    appendfile(Final, PrintTable(Write(Data[1])).."\n")
+                    FinalData[Data[2].currentline] = PrintTable(Write(Data[1])).."\n"
                     Count += 1
                     CPB(Count, TotalFunctions)
                 end
@@ -238,6 +247,8 @@ getgenv().DumpFunctions = function()
                             task.wait()
                         until coroutine.status(FYield) == "suspended"
                     end
+
+                    writefile(Final, Get(FinalData))
 
                     return coroutine.resume(FYield)
                 end

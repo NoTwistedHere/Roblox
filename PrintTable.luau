@@ -192,12 +192,12 @@ end
 local function YieldableFunc(OriginalFunction)
     local NoUV = #getupvalues(OriginalFunction) + 1
     local Variables, Values = IncrementalRepeat("_", NoUV, true), IncrementalRepeat("game", NoUV)
-    local New = loadstring(([[
+    local New = newcclosure(loadstring(([[
         local %s = %s
 
         return function()
             return %s
-        end]]):format(Variables, Values, Variables))()
+        end]]):format(Variables, Values, Variables)))()
 
     hookfunction(New, OriginalFunction)
     return New
@@ -274,11 +274,11 @@ local _PrintTable; _PrintTable = YieldableFunc(function(Table, Indents, Checked,
     return coroutine.yield()
 end)
 
-getgenv().PrintTable = function(Table)
+getgenv().PrintTable = YieldableFunc(function(Table)
     local Type = typeof(Table)
     assert((Type == "table" or Type == "userdata"), "PrintTable: Invalid Argument #1 (table or userdata expected)")
 
     local Success, Response = pcall(_PrintTable, Table)
 
     return (Success and Response) or ("PrintTable: \"%s\""):format(Response)
-end
+end)

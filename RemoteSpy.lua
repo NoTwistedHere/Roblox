@@ -449,9 +449,9 @@ local function SafeCall(Function, ...)
     local Old, SetFEnv, OldEnv, Success, Response = getthreadidentity(), setfenv, getfenv();
 
     setthreadidentity(2)
-    SetFEnv(getfenv(Function))
+    SetFEnv(2, getfenv(Function))
     Success, Response = SortArguments({pcall(Function, ...)}) --// you're loss ;)
-    SetFEnv(OldEnv)
+    SetFEnv(2, OldEnv)
     setthreadidentity(Old)
 
     return Success, Response
