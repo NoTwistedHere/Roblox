@@ -123,22 +123,30 @@ local function Save(Content)
     (RobloxConsole and print or rconsoleprint)(Content)
 end
 
-local function Log(Arguments)
-    for i, v in next, Arguments do
-        if type(v) == "string" then
-            Arguments[i] = Stringify(v)
-        elseif type(v) == "table" then
-            Arguments[i] = PrintTable(v)
+local function Log(Arguments, NewThread)
+    local function Main()
+        for i, v in next, Arguments do
+            if type(v) == "string" then
+                Arguments[i] = Stringify(v)
+            elseif type(v) == "table" then
+                Arguments[i] = PrintTable(v)
+            end
         end
+
+        if Arguments.FunctionInfo then
+            return Save(("What: %s\nMethod: %s\nTo Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s\nFunctionInfo: %s\nTraceback: %s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Timestamp(), Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.FunctionInfo, Arguments.Traceback))
+        elseif Arguments.Response then
+            return Save(("What: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s\nTraceback: %s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Timestamp(), Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.Traceback))
+        end
+
+        Save(("What: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s\nTraceback: %s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Timestamp(), Arguments.Arguments, Arguments.Info, Arguments.Traceback))
     end
 
-    if Arguments.FunctionInfo then
-        return Save(("What: %s\nMethod: %s\nTo Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s\nFunctionInfo: %s\nTraceback: %s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.FunctionInfo, Arguments.Traceback))
-    elseif Arguments.Response then
-        return Save(("What: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s\nTraceback: %s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.Traceback))
+    if NewThread then --// There's a reason as to why I try and avoid task.spawn, but I'm not trying to release semi-bypasses
+        return task.spawn(Main)
     end
 
-    Save(("What: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s\nTraceback: %s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Arguments.Timestamp, Arguments.Arguments, Arguments.Info, Arguments.Traceback))
+    return Main()
 end
 
 local function ArgGuard(self, ...)
@@ -381,27 +389,27 @@ for Name, Method in next, Methods do
 
             table.remove(Arguments, 1)
 
-            task.spawn(function()
-                local Success, Response = SortArguments(pcall(Original, self, unpack(Arguments)))
+            if self.ClassName:match("Function") then --// Events return nil so what's the point in yielding? just leads to retarded detections
+                task.spawn(function()
+                    local Success, Response = SortArguments(pcall(Original, self, unpack(Arguments)))
 
-                if not Success then
-                    return coroutine.resume(Thread, unpack(Response))
-                end
-    
-                if self.ClassName:match("Function") then
-                    Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
-                else
-                    Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Traceback = Traceback})
-                end
+                    if not Success then
+                        return coroutine.resume(Thread, unpack(Response))
+                    end
+        
+                    Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
 
-                repeat
-                    task.wait()
-                until coroutine.status(Thread) == "suspended"
-    
-                coroutine.resume(Thread, unpack(Response))
-            end)
-    
-            return coroutine.yield()
+                    repeat
+                        task.wait()
+                    until coroutine.status(Thread) == "suspended"
+        
+                    coroutine.resume(Thread, unpack(Response))
+                end)
+        
+                return coroutine.yield()
+            end
+
+            Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Traceback = Traceback}, true)
         end
 
         return Original(self, unpack(Arguments)) --unpack(Response)
@@ -418,28 +426,28 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
         local Thread = coroutine.running()
         local Info, Traceback, Arguments = GetCaller(Arguments)
 
-        task.spawn(function(...)
-            setnamecallmethod(Method)
-            local Success, Response = SortArguments(pcall(OldNamecall, self, unpack(Arguments)))
+        if self.ClassName:match("Function") then --// Events return nil so what's the point in yielding? just leads to retarded detections
+            task.spawn(function(...)
+                setnamecallmethod(Method)
+                local Success, Response = SortArguments(pcall(OldNamecall, self, unpack(Arguments)))
 
-            if not Success then
-                return coroutine.resume(Thread, unpack(Response))
-            end
+                if not Success then
+                    return coroutine.resume(Thread, unpack(Response))
+                end
 
-            if self.ClassName:match("Function") then
-                Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
-            else
-                Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Timestamp = Timestamp(), Arguments = Arguments, Info = Info, Traceback = Traceback})
-            end
+                Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
 
-            repeat
-                task.wait()
-            until coroutine.status(Thread) == "suspended"
+                repeat
+                    task.wait()
+                until coroutine.status(Thread) == "suspended"
 
-            coroutine.resume(Thread, unpack(Response))
-        end, ...)
+                coroutine.resume(Thread, unpack(Response))
+            end, ...)
 
-        return coroutine.yield()
+            return coroutine.yield()
+        end
+
+        Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Traceback = Traceback}, true)
     end
 
     return OldNamecall(...) --unpack(Response)
@@ -492,7 +500,7 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...
             end]]
 
             if RemoteSpyEnabled and Enabled["OnClientInvoke"] then
-                Log({What = Name, Method = "InvokeClient", Script = Info.short_src, Timestamp = Timestamp(), Arguments = {...}, FunctionInfo = FunctionInfo, Info = Info, Response = not Success and "Script Error: "..Response or Response, Traceback = Traceback})
+                Log({What = Name, Method = "InvokeClient", Script = Info.short_src, Arguments = {...}, FunctionInfo = FunctionInfo, Info = Info, Response = not Success and "Script Error: "..Response or Response, Traceback = Traceback})
             end
 
             if not Success then
