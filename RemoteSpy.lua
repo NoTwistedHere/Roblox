@@ -154,6 +154,12 @@ local function ArgGuard(self, ...)
         return false
     end
 
+    local Arguments = {...}
+
+    if self.ClassName:match("Function") and #Arguments > 7995 then
+        return false
+    end
+
     for i, v in next, {...} do
         if type(v) == "table" and rawget(v, v) then
             return false
@@ -393,9 +399,9 @@ for Name, Method in next, Methods do
                 task.spawn(function()
                     local Success, Response = SortArguments(pcall(Original, self, unpack(Arguments)))
 
-                    if not Success then
+                    --[[if not Success then
                         return coroutine.resume(Thread, unpack(Response))
-                    end
+                    end]]
         
                     Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
 
@@ -431,9 +437,9 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
                 setnamecallmethod(Method)
                 local Success, Response = SortArguments(pcall(OldNamecall, self, unpack(Arguments)))
 
-                if not Success then
+                --[[if not Success then
                     return coroutine.resume(Thread, unpack(Response))
-                end
+                end]]
 
                 Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
 
