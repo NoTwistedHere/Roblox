@@ -460,11 +460,11 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
 end)
 
 local function SafeCall(Function, ...)
-    local Old, SetFEnv, OldEnv, Success, Response = getthreadidentity(), setfenv, getfenv();
+    local Old, SetFEnv, OldEnv = getthreadidentity(), setfenv, getfenv()
 
     setthreadidentity(2)
     SetFEnv(0, getfenv(Function))
-    Success, Response = SortArguments({pcall(Function, ...)}) --// you're loss ;)
+    local Success, Response = SortArguments(pcall(Function, ...)) --// you're loss ;)
     SetFEnv(0, OldEnv)
     setthreadidentity(Old)
 
