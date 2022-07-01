@@ -1,3 +1,4 @@
+local Threading = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/Threading.lua"))()
 local HttpService = game:GetService("HttpService")
 local ObjectTypes = {
     ["nil"] = 1;
@@ -220,16 +221,14 @@ local _PrintTable; _PrintTable = YieldableFunc(function(Table, Indents, Checked,
         return (Metatable and "setmetatable(%s, %s)" or "%s"):format("{}", Metatable and _PrintTable(Metatable, Indents, Checked))
     end
 
-    local NewTable, Results, Threads, Yield = {}, {}, 0, coroutine.running()
+    local NewTable, Results, Thread = {}, {}, Threading.new()
 
     for i, v in next, Table do
         table.insert(NewTable, {i, v})
     end
 
     for ThreadNum = 0, math.ceil(TableCount / 200) - 1 do
-        Threads += 1
-
-        task.spawn(function()
+        Thread:Add(function()
             for TIndex = 1, 200 do
                 local Data = NewTable[TIndex + (200 * ThreadNum)]
 
@@ -256,22 +255,11 @@ local _PrintTable; _PrintTable = YieldableFunc(function(Table, Indents, Checked,
                 Results[TIndex] = ("%s[%s] = %s%s%s"):format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot), ParsedValue, Count < TableCount and "," or "", #Comment > 0 and " --// " .. Comment or "")
                 Count += 1
             end
-
-            Threads -= 1
-
-            if Threads == 0 then
-                if coroutine.status(Yield) ~= "suspended" then
-                    repeat
-                        task.wait()
-                    until coroutine.status(Yield) == "suspended"
-                end
-
-                coroutine.resume(Yield, (Metatable and "setmetatable(%s, %s)" or "%s"):format(TableCount == 0 and "{}" or ("{\n%s\n%s}"):format(table.concat(Results, "\n"), string.rep(TabWidth, Indents - 1)), Metatable and _PrintTable(Metatable, Indents, Checked)))
-            end
         end)
     end
 
-    return coroutine.yield()
+    Thread.Ended:Wait()
+    return (Metatable and "setmetatable(%s, %s)" or "%s"):format(TableCount == 0 and "{}" or ("{\n%s\n%s}"):format(table.concat(Results, "\n"), string.rep(TabWidth, Indents - 1)), Metatable and _PrintTable(Metatable, Indents, Checked))
 end)
 
 getgenv().PrintTable = YieldableFunc(function(Table)

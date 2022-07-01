@@ -2,6 +2,7 @@ if not PrintTable then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/PrintTable.luau"))()
 end
 
+local Threading = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/Threading.lua"))()
 local Place = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
 local Global, Local = "Function Dumps/", ("%s [%d]/"):format(tostring(Place and Place.Name or "Unknown Game"):gsub("[^%w%s]", ""), game.PlaceId)
 
@@ -141,7 +142,7 @@ local function Get(Table)
     local Final = ""
     
     for i, v in pairs(Table) do
-        Final ..= v
+        Final ..= v[2]
     end
 
     return Final
@@ -216,17 +217,13 @@ getgenv().DumpFunctions = function()
 
     CPB(1, 1)
     local CPB = ProgressBar(("Dumping Functions [%d]"):format(TotalFunctions), Thread, 0, 1)
-
     local Count = 0
 
     for Source, Dump in next, Scripts do
-        local Final, FThreads, FYield, FinalData = CheckFile(Directory, Source), 0, coroutine.running(), {}
-
-        table.sort(Dump, function(a, b) return a[2].currentline < b[2].currentline end)
+        local Final, FinalData, Thread = CheckFile(Directory, Source), {}, Threading.new()
 
         for ThreadNum = 0, math.ceil(#Dump / 200) - 1 do
-            FThreads += 1
-            task.spawn(function()
+            Thread:Add(function()
                 for TIndex = 1, 201 do
                     local Data = Dump[TIndex + (200 * ThreadNum)]
 
@@ -234,28 +231,16 @@ getgenv().DumpFunctions = function()
                         break;
                     end
 
-                    FinalData[Data[2].currentline] = PrintTable(Write(Data[1])).."\n"
+                    FinalData[Data[2].currentline] = {Data[2].currentline, PrintTable(Write(Data[1])).."\n"}
                     Count += 1
                     CPB(Count, TotalFunctions)
-                end
-
-                FThreads -= 1
-
-                if FThreads == 0 then
-                    if coroutine.status(FYield) ~= "suspended" then
-                        repeat
-                            task.wait()
-                        until coroutine.status(FYield) == "suspended"
-                    end
-
-                    writefile(Final, Get(FinalData))
-
-                    return coroutine.resume(FYield)
                 end
             end)
         end
 
-        coroutine.yield()
+        Thread.Ended:Wait()
+        table.sort(FinalData, function(a, b) return a[1] < b[1] end)
+        writefile(Final, Get(FinalData))
     end
 
     rconsoleprint("Finished")
