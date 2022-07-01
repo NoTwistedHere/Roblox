@@ -223,8 +223,10 @@ local _PrintTable; _PrintTable = YieldableFunc(function(Table, Indents, Checked,
 
     local NewTable, Results, Thread = {}, {}, Threading.new()
 
-    for i, v in next, Table do
-        table.insert(NewTable, {i, v})
+    function()
+        for i, v in next, Table do
+            table.insert(NewTable, {i, v})
+        end
     end
 
     for ThreadNum = 0, math.ceil(TableCount / 200) - 1 do
@@ -258,7 +260,7 @@ local _PrintTable; _PrintTable = YieldableFunc(function(Table, Indents, Checked,
         end)
     end
 
-    Thread.Ended:Wait()
+    Thread.Ended:Wait("f")
     return (Metatable and "setmetatable(%s, %s)" or "%s"):format(TableCount == 0 and "{}" or ("{\n%s\n%s}"):format(table.concat(Results, "\n"), string.rep(TabWidth, Indents - 1)), Metatable and _PrintTable(Metatable, Indents, Checked))
 end)
 

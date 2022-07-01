@@ -2,6 +2,8 @@ local Threading = {}
 local Signaling = {} --// Is that right?
 
 function Signaling:Fire(...)
+    self.Fired = true
+
     for i, v in next, self.Callbacks do
         if type(v) == "function" then
             task.spawn(v, ...)
@@ -13,8 +15,8 @@ function Signaling:Fire(...)
     return Signaling
 end
 
-function Signaling:Wait()
-    if self.Active == 0 then
+function Signaling:Wait(Arg)
+    if self.Active == 0 or (Arg == "f" and self.Fired) then
         return;
     end
 
