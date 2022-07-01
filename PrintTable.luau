@@ -223,10 +223,8 @@ local _PrintTable; _PrintTable = YieldableFunc(function(Table, Indents, Checked,
 
     local NewTable, Results, Thread = {}, {}, Threading.new()
 
-    function()
-        for i, v in next, Table do
-            table.insert(NewTable, {i, v})
-        end
+    for i, v in next, Table do
+        table.insert(NewTable, {i, v})
     end
 
     for ThreadNum = 0, math.ceil(TableCount / 200) - 1 do
