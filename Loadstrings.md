@@ -54,6 +54,6 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/
 ```lua
 Threads = 10
 IgnoreEmpty = true --// Ignore scripts with no bytecode
-loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/ScriptDumper.lua"))() --// Place the loadstring in your autoexec if you wish to spy :InvokeClient()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/ScriptDumper.lua"))() --// Place the loadstring in your autoexec if you wish to decompile scripts before they have the chance to hide themselves
 ```
 Writes to `Game Dumps/{PlaceId}/Scripts for {Name} [{GameId-PlaceVersion}]`
