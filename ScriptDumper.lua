@@ -2,6 +2,7 @@ local CoreGui, CorePackages, Players, RunService, RunService = game:GetService("
 local Result = "<roblox xmlns:xmime=\"http://www.w3.org/2005/05/xmlmime\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"http://www.roblox.com/roblox.xsd\" version=\"4\">"
 local Decompiled, Scripts = 0, {}
 local DecompiledScripts = {}
+local IgnoreEmpty = IgnoreEmpty or true
 local Threads = Threads or 10
 local Instances = {
     "LocalScript";
@@ -104,8 +105,24 @@ local function FindService(Service)
     return Success and Response
 end
 
+local function FindScripts(Table)
+    for i, v in next, Table do
+        if typeof(v) == "Instance" and (v:IsA("LocalScript") or v:IsA("ModuleScript")) then
+            return true
+        end
+    end
+
+    return false
+end
+
 local function GetClassName(Object)
     local ClassName = Object.ClassName
+
+    if (Object:IsA("LocalScript") or Object:IsA("ModuleScript")) and getscripthash(Object) == nil and IgnoreEmpty then
+        if not FindScripts(Object:GetDescendants()) then
+            return;
+        end
+    end
 
     if table.find(Instances, ClassName) or table.find(Services, ClassName) or FindService(ClassName) then
         return ClassName
@@ -119,8 +136,13 @@ local function SteralizeString(String)
 end
 
 local function MakeInstance(Object)
-    local ClassName = Object.ClassName
-    local IntResult = ("<Item class=\"%s\" referent=\"RBX%s\"><Properties><string name=\"Name\">%s</string>"):format(GetClassName(Object), Object:GetDebugId(0), SteralizeString(Object.Name))
+    local ClassName = GetClassName(Object)
+
+    if not ClassName then
+        return ""
+    end
+
+    local IntResult = ("<Item class=\"%s\" referent=\"RBX%s\"><Properties><string name=\"Name\">%s</string>"):format(ClassName, Object:GetDebugId(0), SteralizeString(Object.Name))
     ProgressBar(InstancesCreated, InstancesTotal)
     
     if (ClassName == "LocalScript" or ClassName == "ModuleScript") then
@@ -128,7 +150,7 @@ local function MakeInstance(Object)
         local Source = Hash and (DecompiledScripts[Hash] or "--// Failed to decompile") or "--// Script has no bytecode"
 
         if ClassName == "LocalScript" then
-            IntResult ..= ("<bool name=\"Disabled\">%s</bool>"):format(tostring(Object.Disabled))
+            IntResult ..= ("<bool name=\"Disabled\">%s</bool>"):format(tostring(Object.Disabled or not Hash))
         end
         
         IntResult ..= ([==[<ProtectedString name="Source"><![CDATA[%s]]></ProtectedString>]==]):format(("--// Hash: %s\n%s"):format(Hash or "nil", Source))
