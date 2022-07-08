@@ -43,11 +43,9 @@ if not RunService:IsRunning() then --// So you can dump scripts in games that do
         end
     end)
 
-    --[[repeat
+    repeat
         task.wait(0.5) --// There's no rush
-    until RunService:IsRunning()]]
-
-    game.Loaded:Wait()
+    until RunService:IsRunning()
 end
 
 local LocalPlayer = Players.LocalPlayer
@@ -107,7 +105,7 @@ end
 
 local function FindScripts(Table)
     for i, v in next, Table do
-        if typeof(v) == "Instance" and (v:IsA("LocalScript") or v:IsA("ModuleScript")) then
+        if typeof(v) == "Instance" and (v:IsA("LocalScript") or v:IsA("ModuleScript")) or (not IgnoreEmpty or IgnoreEmpty and not getscripthash(v)) then
             return true
         end
     end
