@@ -5,6 +5,7 @@ end
 local Threading = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/Threading.lua"))()
 local Place = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
 local Global, Local = "Function Dumps/", ("%s [%d]/"):format(tostring(Place and Place.Name or "Unknown Game"):gsub("[^%w%s]", ""), game.PlaceId)
+local Key = game:GetService("HttpService"):GenerateGUID(false)
 
 local function ConvertCodepoints(OriginalString)
     if OriginalString:match("[^%a%c%d%l%p%s%u%x]") or OriginalString:match("[\\/:*?\"<>|]") then
@@ -108,8 +109,9 @@ if not isfolder(Global) then
     makefolder(Global)
 end
 
-function Write(Function, Checked, NoWrite)
+function Write(Function, Checked, OriginalFunction)
     local Checked, Upvalues, Constants, Protos, Info = Checked or {}, getupvalues(Function), getconstants(Function), getprotos(Function), getinfo(Function)
+    local UserdataCount = 0
 
     table.insert(Checked, Function)
 
@@ -118,7 +120,22 @@ function Write(Function, Checked, NoWrite)
             continue;
         end
 
-        Protos[i] = Write(v, Checked, true)
+        Protos[i] = Write(v, Checked, Function)
+    end
+
+    for i, v in next, Constants do
+        if typeof(v) == "userdata" and not getrawmetatable(v) then
+            local Proxy = newproxy(true)
+            UserdataCount += OriginalFunction and 0 or 1
+            setrawmetatable(Proxy, {
+                [Key] = OriginalFunction or (Protos[UserdataCount] and Protos[UserdataCount]["Info"]["func"]) or "[[LOCAL FUNCTION DEFINITIONS MAY BE INCORRECT]]";
+            })
+            Constants[i] = Proxy
+        end
+    end
+
+    if OriginalFunction then
+        return {Constants = Constants, Info = Info}
     end
 
     return {Upvalues = Upvalues, Constants = Constants, LocalFunctions = Protos, Info = Info}
@@ -148,7 +165,7 @@ local function Get(Table)
     return Final
 end
 
-getgenv().DumpScript = function(Source)
+getgenv().DumpScript = function(Source) --// Outdated, cba to update tbh
     if not isfolder(Global..Local) then
         makefolder(Global..Local)
     elseif isfolder(Global..Local) then
@@ -178,7 +195,7 @@ getgenv().DumpScript = function(Source)
     table.sort(Functions, function(a, b) return a[2].currentline < b[2].currentline end)
 
     for i, Data in next, Functions do
-        appendfile(File, PrintTable(Write(Data[1])))
+        appendfile(File, PrintTable(Write(Data[1]), {MetatableKey = Key}))
 
         CPB(i, #Functions)
     end
@@ -231,7 +248,7 @@ getgenv().DumpFunctions = function()
                         break;
                     end
 
-                    FinalData[Data[2].currentline] = {Data[2].currentline, PrintTable(Write(Data[1])).."\n"}
+                    FinalData[Data[2].currentline] = {Data[2].currentline, PrintTable(Write(Data[1]), {MetatableKey = Key}).."\n"}
                     Count += 1
                     CPB(Count, TotalFunctions)
                 end

@@ -1,8 +1,14 @@
---// Report any bugs/detections to me
+--[[
+    Report any bugs, issues and detections to me if you don't mind
+
+    TODO:
+        Generate scripts (Coming soon, just need to finish the ability to customize PrintTable results)
+]]
 
 if not PrintTable then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/PrintTable.luau"))()
 end
+local NUB = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/NoUpvalueBypass.lua"))()
 
 getgenv().WriteToFile = WriteToFile or false
 getgenv().RobloxConsole = RobloxConsole or false
@@ -498,7 +504,7 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...
         local FunctionInfo = getinfo(Function)
         local Info, Traceback = GetCaller(...)
 
-        return OldNewIndex(self, "OnClientInvoke", function(...)
+        --[==[return OldNewIndex(self, "OnClientInvoke", function(...)
             local Success, Response = SafeCall(Function, ...)
 
             --[[if not Success then --// Commented out because I know of an easy way to bypass, but feel free to enable it if you wish
@@ -514,7 +520,19 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...
             end
 
             return unpack(Response)
-        end)
+        end)]==]
+
+        NUB([=[local Success, Response = <<SafeCall>>(<<Function>>, ...)
+
+        if <<getgenv>>().RemoteSpyEnabled and <<getgenv>>().Enabled["OnClientInvoke"] then
+            Log({What = <<Name>>, Method = "InvokeClient", Script = <<Info>>.short_src, Arguments = {...}, FunctionInfo = <<FunctionInfo>>, Info = <<Info>>, Response = not Success and "Script Error: "..Response or Response, Traceback = <<Traceback>>})
+        end
+
+        if not Success then
+            return;
+        end
+
+        return unpack(Response)]=], {SafeCall = SafeCall, Function = Function, getgenv = getgenv, Name = Name, Info = Info, FunctionInfo = FunctionInfo, Traceback = Traceback})
     end
 
     return OldNewIndex(...)

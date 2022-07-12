@@ -190,7 +190,7 @@ local function IncrementalRepeat(ToRepeat, Repeat, Increment)
     return Final
 end
 
-local function YieldableFunc(OriginalFunction)
+local function YieldableFunc(OriginalFunction) --// Used to work, don't know if it still does
     local NoUV = #getupvalues(OriginalFunction) + 1
     local Variables, Values = IncrementalRepeat("_", NoUV, true), IncrementalRepeat("game", NoUV)
     local New = newcclosure(loadstring(([[
@@ -204,21 +204,57 @@ local function YieldableFunc(OriginalFunction)
     return New
 end
 
-local _PrintTable; _PrintTable = YieldableFunc(function(Table, Indents, Checked, Root)
+local function CreateComment(Comment, Options, Existing)
+    if Options.NoComments or Options.NoIndentation then
+        return ""
+    end
+
+    local Base = Existing and " // %s" or (Options.NoIndentation and " --[[ %s ]]" or " --// %s")
+
+    return Base:format(Comment)
+end
+
+local _PrintTable; _PrintTable = YieldableFunc(function(Table, Options, Indents, Checked, Root)
+    if typeof(Table) ~= "table" and typeof(Table) ~= "userdata" then
+        return;
+    end
+
     local Metatable, IsProxy = getrawmetatable(Table), typeof(Table) == "userdata"
-    local TableCount, TabWidth, Count = IsProxy and 0 or CountTable(Table), "    ", 1
+    local TableCount, TabWidth, Count = IsProxy and 0 or CountTable(Table), Options.NoIndentation and " " or "    ", 1
 
     Root = Root or "Table"
     Checked = Checked or {}
-    Indents = Indents or 1
+    Indents = Options.NoIndentation and 1 or Indents or 1
     Checked[Table] = TableCount
 
     if TableCount >= 3e3 then
-        return "{ \"Table is too large\" }; --// Max: 5e3"
+        return ("{ \"Table is too large\" }; --// Max: 5e3, Got: %d"):format(TableCount)
     elseif IsProxy then
-        return (Metatable and "setmetatable(%s, %s)" or "%s"):format(Tostring(Table), Metatable and _PrintTable(Metatable, Indents, Checked))
+        local Key, Comment = Options.MetatableKey;
+
+        if Key and Metatable and rawget(Metatable, Key) ~= nil then
+            --[[for i, v in next, Metatable do
+                if type(i) == "string" and i:match(Key) then
+                    print(i)
+
+                    if i ~= Key then
+                        local NewIndex = i:gsub("@"..Key, "")
+
+                        Metatable[NewIndex] = v
+                    end
+
+                    Metatable[i] = nil
+                end
+            end]]
+
+            Table = rawget(Metatable, Key)
+            Metatable = nil
+            Comment = CreateComment("Defined by caller", Options)
+        end
+
+        return (Metatable and "setmetatable(%s, %s)%s" or "%s%s%s"):format(Tostring(Table), Metatable and _PrintTable(Metatable, Options, Indents, Checked) or Comment or "", Metatable and Comment or ""), Comment and true or false, Table
     elseif TableCount == 0 then
-        return (Metatable and "setmetatable(%s, %s)" or "%s"):format("{}", Metatable and _PrintTable(Metatable, Indents, Checked))
+        return (Metatable and "setmetatable(%s, %s)" or "%s"):format("{}", Metatable and _PrintTable(Metatable, Options, Indents, Checked))
     end
 
     local NewTable, Results, Thread = {}, {}, Threading.new()
@@ -241,32 +277,92 @@ local _PrintTable; _PrintTable = YieldableFunc(function(Table, Indents, Checked,
                 local NewRoot = Root..("[%s]"):format(Stringify(Index))
                 local AlreadyLogged = type(Value) == "table" and (Checked[Value] or CheckForClone(Checked, Value))
 
+                local function Format(...)
+                    local Arguments = {...}
+                    
+                    if type(Index) == "number" and Options.IgnoreNumberIndex then
+                        table.remove(Arguments, 2)
+
+                        return ("%s%s%s%s"):format(unpack(Arguments))
+                    end
+
+                    return ("%s[%s] = %s%s%s"):format(...)
+                end
+
                 if AlreadyLogged then
-                    Results[TIndex] = ("%s[%s] = %s%s%s"):format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot), Tostring(Value), Count < TableCount and "," or "", Checked[Value] and "" or " --// Duplicate of "..Tostring(AlreadyLogged))
+                    Results[TIndex] = Format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot), Tostring(Value), Count < TableCount and "," or "", Checked[Value] and "" or CreateComment("Duplicate of "..Tostring(AlreadyLogged), Options))
                     Count += 1
                     continue;
                 end
 
                 local IsValid = (type(Value) == "table" or typeof(Value) == "userdata") and not Checked[Value]
-                local Parsed = {ParseObject(Value, true, true, Checked, NewRoot)}
-                local ParsedValue = IsValid and _PrintTable(Value, Indents + 1, Checked, NewRoot) or Parsed[1]
+                local ParsedValue, IsComment, ReParse = _PrintTable(Value, Options, Indents + 1, Checked, NewRoot)
+                local Parsed = {ParseObject(ReParse or Value, true, true, Checked, NewRoot)}
                 local Comment = (IsValid and Parsed[1]..(Parsed[2] and " " or "") or "") .. (Parsed[2] and Parsed[2] or "")
 
-                Results[TIndex] = ("%s[%s] = %s%s%s"):format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot), ParsedValue, Count < TableCount and "," or "", #Comment > 0 and " --// " .. Comment or "")
+                Results[TIndex] = Format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot), ParsedValue or Parsed[1], Count < TableCount and "," or "", #Comment > 0 and CreateComment(Comment or "", Options, IsComment))
                 Count += 1
             end
         end)
     end
 
     Thread.Ended:Wait("f")
-    return (Metatable and "setmetatable(%s, %s)" or "%s"):format(TableCount == 0 and "{}" or ("{\n%s\n%s}"):format(table.concat(Results, "\n"), string.rep(TabWidth, Indents - 1)), Metatable and _PrintTable(Metatable, Indents, Checked))
+    return (Metatable and "setmetatable(%s, %s)" or "%s"):format(TableCount == 0 and "{}" or ("{%s%s%s%s}"):format(Options.OneLine and "" or "\n", table.concat(Results, Options.OneLine and "" or "\n"), Options.OneLine and " " or "\n", string.rep(TabWidth, Indents - 1)), Metatable and _PrintTable(Metatable, Options, Indents, Checked))
 end)
 
-getgenv().PrintTable = YieldableFunc(function(Table)
+getgenv().PrintTable = YieldableFunc(function(Table, Options)
     local Type = typeof(Table)
-    assert((Type == "table" or Type == "userdata"), "PrintTable: Invalid Argument #1 (table or userdata expected)")
+    assert((Type == "table" or Type == "userdata"), "PrintTable Error: Invalid Argument #1 (table or userdata expected)")
+    assert((type(Options) == "table" or not Options), "PrintTable Error: Invalid Argument #2 (table expected)")
 
-    local Success, Response = pcall(_PrintTable, Table)
+    local Success, Response = pcall(_PrintTable, Table, Options or {})
 
-    return (Success and Response) or ("PrintTable: \"%s\""):format(Response)
+    return (Success and Response) or ("PrintTable Error: \"%s\""):format(Response)
 end)
+
+getgenv().PrintArguments = YieldableFunc(function(...)
+    local Success, Response = pcall(_PrintTable, {...}, {})
+
+    return (Success and Response) or ("PrintTable Error: \"%s\""):format(Response)
+end)
+
+--[[
+    Example result (from FunctionDumper): {
+        ["LocalFunctions"] = {
+            [1] = {
+                ["Info"] = {
+                    ["source"] = "@T7BMcOMUwknsr", --// [string]
+                    ["what"] = "Lua", --// [string]
+                    ["numparams"] = 0, --// [number]
+                    ["func"] = function: 0x000000003244c9af, --// [function] source: "@T7BMcOMUwknsr", what: Lua, name: "yeah" (currentline: 0, numparams: 0, nups: 0, is_vararg: 0)
+                    ["short_src"] = "T7BMcOMUwknsr", --// [string]
+                    ["currentline"] = 0, --// [number]
+                    ["name"] = "yeah", --// [string]
+                    ["is_vararg"] = 0, --// [number]
+                    ["nups"] = 0 --// [number]
+                }, --// table: 0x00000000fc8a52cf [table]
+                ["Constants"] = {
+                    [1] = "warn", --// [string]
+                    [2] = function: 0x0000000007b02717 --// Defined by caller // function: 0x0000000007b02717 [function] source: "@T7BMcOMUwknsr", what: Lua, name: "f" (currentline: 0, numparams: 0, nups: 0, is_vararg: 8)
+                } --// table: 0x0000000065e00a6f [table]
+            } --// table: 0x000000005144536f [table]
+        }, --// table: 0x0000000092b5bbcf [table]
+        ["Upvalues"] = {}, --// table: 0x00000000cf56be0f [table]
+        ["Info"] = {
+            ["source"] = "@T7BMcOMUwknsr", --// [string]
+            ["what"] = "Lua", --// [string]
+            ["numparams"] = 0, --// [number]
+            ["func"] = function: 0x0000000007b02717, --// [function] source: "@T7BMcOMUwknsr", what: Lua, name: "f" (currentline: 0, numparams: 0, nups: 0, is_vararg: 8)
+            ["short_src"] = "T7BMcOMUwknsr", --// [string]
+            ["currentline"] = 0, --// [number]
+            ["name"] = "f", --// [string]
+            ["is_vararg"] = 8, --// [number]
+            ["nups"] = 0 --// [number]
+        }, --// table: 0x000000001f18f4af [table]
+        ["Constants"] = {
+            [1] = "newproxy", --// [string]
+            [2] = function: 0x000000003244c9af --// Defined by caller // function: 0x000000003244c9af [function] source: "@T7BMcOMUwknsr", what: Lua, name: "yeah" (currentline: 0, numparams: 0, nups: 0, is_vararg: 0)
+        } --// table: 0x0000000021b67eef [table]
+    }
+
+]]

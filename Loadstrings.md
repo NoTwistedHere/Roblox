@@ -23,6 +23,26 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/
 ## <b>Example Usage:</b>
 ```lua
 PrintTable({a, "b", 1, game:GetService("Players"), pcall})
+
+PrintTable({ workspace, 20, { pcall, 0X20 } }, {
+    OneLine = true;
+    IgnoreNumberIndex = true;
+    NoIndentation = false;
+    MetatableKey = nil;
+})
+
+PrintArguments(a, "b", 1, game:GetService("Players"), pcall)
+
+local Proxy, Key = newproxy(true), game:GetService("HttpService"):GenerateGUID(false)
+setrawmetatable(Proxy, {
+    [Key] = "Hello there"
+})
+PrintTable({ workspace, 20, Proxy }, {
+    OneLine = false;
+    IgnoreNumberIndex = false;
+    NoIndentation = false;
+    MetatableKey = Key;
+})
 ```
 
 # RemoteSpy
