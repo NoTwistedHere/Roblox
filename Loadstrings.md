@@ -29,9 +29,18 @@ PrintTable({ workspace, 20, { pcall, 0X20 } }, {
     IgnoreNumberIndex = true;
     NoIndentation = false;
     MetatableKey = nil;
+    GenerateScript = false;
 })
 
 PrintArguments(a, "b", 1, game:GetService("Players"), pcall)
+
+local Result = PrintTable({ 1, "b", game:GetService("Players").LocalPlayer}, {
+    OneLine = false;
+    IgnoreNumberIndex = false;
+    NoIndentation = false;
+    MetatableKey = Key;
+    GenerateScript = true;
+}) --// Will return a table with two arguments, [1] will contain FindFunction(), [2] will contain the generated code
 
 local Proxy, Key = newproxy(true), game:GetService("HttpService"):GenerateGUID(false)
 setrawmetatable(Proxy, {
@@ -42,6 +51,7 @@ PrintTable({ workspace, 20, Proxy }, {
     IgnoreNumberIndex = false;
     NoIndentation = false;
     MetatableKey = Key;
+    GenerateScript = false;
 })
 ```
 
@@ -55,6 +65,7 @@ WriteToFile = true
 RobloxConsole = false
 GetCallerV2 = false
 RemoteSpyEnabled = true
+GenerateCode = true
 Enabled = {
     BindableEvent = false;
     BindableFunction = false;

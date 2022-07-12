@@ -85,6 +85,44 @@ local function ConvertCodepoints(OriginalString, Modified, Extra)
     return "\""..OriginalString.."\"", Extra and Modified > 0 or nil
 end
 
+local function IsService(Object)
+    local Success, Response = pcall(function()
+        return game:GetService(Object.ClassName)
+    end)
+    
+    return Success and Response
+end
+
+local function GetName(Name)
+    if tonumber(Name:sub(1, 1)) or Name:match("([0-9a-zA-Z]*)") ~= Name then
+        return ("[\"%s\"]"):format(Name)
+    end
+    
+    return (".%s"):format(Name)
+end
+
+local function GetPath(Object, Sub)
+    local Path = GetName(Object.Name):reverse()
+    local Parent = Object.Parent
+    
+    if Parent == game then
+        Path = ("game"):reverse()
+    elseif Parent and IsService(Parent) then
+        Path ..= (":GetService(\"%s\")"):format(Parent.ClassName):reverse()
+        Path ..= GetPath(Parent, true)
+    elseif Parent then
+        Path ..= GetPath(Parent, true)
+    else
+        Path ..= ("nil"):reverse()
+    end
+    
+    if Sub then
+        return Path
+    end
+    
+    return Path:reverse()
+end
+
 local function Tostring(Object)
     local Metatable = getrawmetatable(Object)
 
@@ -129,7 +167,7 @@ local function Stringify(String, Extra, Checked, Root)
     return ConvertCodepoints(AntiRep(String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("%c", function(Char) return "\\"..string.byte(Char) end), Extra))
 end
 
-local function ParseObject(Object, DetailedInfo, TypeOf, Checked, Root)
+local function ParseObject(Object, DetailedInfo, TypeOf, Checked, Root, Options)
     local Type = typeof(Object)
     local ObjectType = ObjectTypes[Type]
     
@@ -138,7 +176,8 @@ local function ParseObject(Object, DetailedInfo, TypeOf, Checked, Root)
             local String, Modified = Stringify(Object, true, Checked, Root)
             return String, Modified
         elseif ObjectType == 3 then
-            return Stringify(Object:GetFullName(), false, Checked, Root), " ClassName: "..Object.ClassName
+            --return Stringify(GetPath(Object), false, Checked, Root), " ClassName: "..Object.ClassName
+            return GetPath(Object), " ClassName: "..Object.ClassName
         elseif ObjectType == 5 then
             local Info = getinfo(Object)
             return ("%s"):format(tostring(Object)), (" source: %s, what: %s, name: %s (currentline: %s, numparams: %s, nups: %s, is_vararg: %s)"):format(Stringify(Info.source), Info.what, Stringify(Info.name), Info.currentline, Info.numparams, Info.nups, Info.is_vararg)
@@ -253,8 +292,6 @@ local _PrintTable; _PrintTable = YieldableFunc(function(Table, Options, Indents,
         end
 
         return (Metatable and "setmetatable(%s, %s)%s" or "%s%s%s"):format(Tostring(Table), Metatable and _PrintTable(Metatable, Options, Indents, Checked) or Comment or "", Metatable and Comment or ""), Comment and true or false, Table
-    elseif TableCount == 0 then
-        return (Metatable and "setmetatable(%s, %s)" or "%s"):format("{}", Metatable and _PrintTable(Metatable, Options, Indents, Checked))
     end
 
     local NewTable, Results, Thread = {}, {}, Threading.new()
@@ -290,23 +327,47 @@ local _PrintTable; _PrintTable = YieldableFunc(function(Table, Options, Indents,
                 end
 
                 if AlreadyLogged then
-                    Results[TIndex] = Format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot), Tostring(Value), Count < TableCount and "," or "", Checked[Value] and "" or CreateComment("Duplicate of "..Tostring(AlreadyLogged), Options))
+                    Results[TIndex] = Format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot, Options), Tostring(Value), Count < TableCount and "," or "", Checked[Value] and "" or CreateComment("Duplicate of "..Tostring(AlreadyLogged), Options))
                     Count += 1
                     continue;
                 end
 
                 local IsValid = (type(Value) == "table" or typeof(Value) == "userdata") and not Checked[Value]
                 local ParsedValue, IsComment, ReParse = _PrintTable(Value, Options, Indents + 1, Checked, NewRoot)
-                local Parsed = {ParseObject(ReParse or Value, true, true, Checked, NewRoot)}
+                local Parsed = {ParseObject(ReParse or Value, true, true, Checked, NewRoot, Options)}
                 local Comment = (IsValid and Parsed[1]..(Parsed[2] and " " or "") or "") .. (Parsed[2] and Parsed[2] or "")
 
-                Results[TIndex] = Format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot), ParsedValue or Parsed[1], Count < TableCount and "," or "", #Comment > 0 and CreateComment(Comment or "", Options, IsComment))
+                Results[TIndex] = Format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot, Options), ParsedValue or Parsed[1], Count < TableCount and "," or "", #Comment > 0 and CreateComment(Comment or "", Options, IsComment))
                 Count += 1
             end
         end)
     end
 
-    Thread.Ended:Wait("f")
+    if TableCount > 0 then
+        Thread.Ended:Wait("f")
+    end
+
+    if Options.GenerateScript then
+        if Root == "Table" then
+            local EndResult = ""
+
+            for i, v in next, Results do
+                if v:find("FindFunction") then
+                    EndResult ..= v .. (Options.OneLine and "" or "\n")
+                    continue;
+                end
+
+                EndResult ..= v:gsub("function: 0x([0-9a-f]+)", function(h) return ("FindFunction(\"function: 0x%s\")"):format(h) end) .. (Options.OneLine and "" or "\n")
+            end
+
+            return {"local function FindFunction(k) for _, v in next, getgc() do if tostring(v) == k then return v end end end\n", EndResult .. " "}
+        else
+            for i, v in next, Results do
+                Results[i] = v:gsub("function: 0x([0-9a-f]+)", function(h) return ("FindFunction(\"function: 0x%s\")"):format(h) end)
+            end
+        end
+    end
+
     return (Metatable and "setmetatable(%s, %s)" or "%s"):format(TableCount == 0 and "{}" or ("{%s%s%s%s}"):format(Options.OneLine and "" or "\n", table.concat(Results, Options.OneLine and "" or "\n"), Options.OneLine and " " or "\n", string.rep(TabWidth, Indents - 1)), Metatable and _PrintTable(Metatable, Options, Indents, Checked))
 end)
 

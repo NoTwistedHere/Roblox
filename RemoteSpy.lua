@@ -8,12 +8,13 @@
 if not PrintTable then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/PrintTable.luau"))()
 end
-local NUB = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/NoUpvalueBypass.lua"))()
+local NUB = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/NoUpvalueHook.lua"))()
 
 getgenv().WriteToFile = WriteToFile or false
 getgenv().RobloxConsole = RobloxConsole or false
 getgenv().GetCallerV2 = GetCallerV2 or false --// BETA
 getgenv().RemoteSpyEnabled = RemoteSpyEnabled or true
+getgenv().GenerateCode = GenerateCode or false
 getgenv().Enabled = Enabled or {
     BindableEvent = false;
     BindableFunction = false;
@@ -30,7 +31,6 @@ local Methods = {
 local Hooks = {}
 local Stacks, Source = {}, getinfo(1).source
 local Directory, FileName, FileType = "RemoteSpyLogs/", ("RemoteSpy Logs [%s_%s]"):format(game.PlaceId, game.PlaceVersion), ".luau"
-local GetFullName = game.GetFullName
 local HttpService = game:GetService("HttpService")
 local isexecutorfunction = isexecutorfunction or is_synapse_function or isexecutorclosure or isourclosure or function(f) return getinfo(f, "s").source:find("@") and true or false end
 local getthreadidentity = getthreadidentity or syn.get_thread_identity
@@ -129,8 +129,59 @@ local function Save(Content)
     (RobloxConsole and print or rconsoleprint)(Content)
 end
 
+local function IsService(Object)
+    local Success, Response = pcall(function()
+        return game:GetService(Object.ClassName)
+    end)
+    
+    return Success and Response
+end
+
+local function GetName(Name)
+    if tonumber(Name:sub(1, 1)) or Name:match("([0-9a-zA-Z]*)") ~= Name then
+        return ("[\"%s\"]"):format(Name)
+    end
+    
+    return (".%s"):format(Name)
+end
+
+local function GetPath(Object, Sub)
+    local Path = GetName(Object.Name):reverse()
+    local Parent = Object.Parent
+    
+    if Parent == game then
+        Path = ("game"):reverse()
+    elseif Parent and IsService(Parent) then
+        Path ..= (":GetService(\"%s\")"):format(Parent.ClassName):reverse()
+        Path ..= GetPath(Parent, true)
+    elseif Parent then
+        Path ..= GetPath(Parent, true)
+    else
+        Path ..= ("nil"):reverse()
+    end
+    
+    if Sub then
+        return Path
+    end
+    
+    return Path:reverse()
+end
+
+local function GenerateC(self, Method, Arguments)
+    local R = PrintTable(Arguments, {NoIndentation = true, OneLine = true, NoComments = true, IgnoreNumberIndex = true, GenerateScript = true})
+    local Result = R[1]
+    
+    Method = Method:gsub(" (Raw)", "")
+
+    Result ..= ("%s:%s(%s)"):format(GetPath(self), Method, R[2])
+    
+    return Result
+end
+
 local function Log(Arguments, NewThread)
     local function Main()
+        local GeneratedCode = GenerateCode and GenerateC(Arguments.self, Arguments.Method, Arguments.Arguments) or "Disabled"
+
         for i, v in next, Arguments do
             if type(v) == "string" then
                 Arguments[i] = Stringify(v)
@@ -140,12 +191,12 @@ local function Log(Arguments, NewThread)
         end
 
         if Arguments.FunctionInfo then
-            return Save(("What: %s\nMethod: %s\nTo Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s\nFunctionInfo: %s\nTraceback: %s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Timestamp(), Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.FunctionInfo, Arguments.Traceback))
+            return Save(("What: %s\nMethod: %s\nTo Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s\nFunctionInfo: %s\nTraceback: %s\nGenerated Code:\n%s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Timestamp(), Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.FunctionInfo, Arguments.Traceback, GeneratedCode))
         elseif Arguments.Response then
-            return Save(("What: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s\nTraceback: %s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Timestamp(), Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.Traceback))
+            return Save(("What: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s\nTraceback: %s\nGenerated Code:\n%s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Timestamp(), Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.Traceback, GeneratedCode))
         end
 
-        Save(("What: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s\nTraceback: %s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Timestamp(), Arguments.Arguments, Arguments.Info, Arguments.Traceback))
+        Save(("What: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s\nTraceback: %s\nGenerated Code:\n%s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Timestamp(), Arguments.Arguments, Arguments.Info, Arguments.Traceback, GeneratedCode))
     end
 
     if NewThread then --// There's a reason as to why I try and avoid task.spawn, but I'm not trying to release semi-bypasses
@@ -409,7 +460,7 @@ for Name, Method in next, Methods do
                         return coroutine.resume(Thread, unpack(Response))
                     end]]
         
-                    Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
+                    Log({self = self, What = GetPath(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
 
                     repeat
                         task.wait()
@@ -421,7 +472,7 @@ for Name, Method in next, Methods do
                 return coroutine.yield()
             end
 
-            Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Traceback = Traceback}, true)
+            Log({self = self, What = GetPath(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Traceback = Traceback}, true)
         end
 
         return Original(self, unpack(Arguments)) --unpack(Response)
@@ -447,7 +498,7 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
                     return coroutine.resume(Thread, unpack(Response))
                 end]]
 
-                Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
+                Log({self = self, What = GetPath(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
 
                 repeat
                     task.wait()
@@ -459,7 +510,7 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
             return coroutine.yield()
         end
 
-        Log({What = GetFullName(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Traceback = Traceback}, true)
+        Log({self = self, What = GetPath(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Traceback = Traceback}, true)
     end
 
     return OldNamecall(...) --unpack(Response)
@@ -499,7 +550,7 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...
     local self, Arguments = SortArguments(...)
 
     if ArgGuard(...) and self:IsA("RemoteFunction") and IsValidIndex(TrueString(Arguments[1])) and pcall(IsValid, Arguments[2]) then
-        local Name, ClassName = GetFullName(self), self.ClassName
+        local Name, ClassName = GetPath(self), self.ClassName
         local Function = Arguments[2]
         local FunctionInfo = getinfo(Function)
         local Info, Traceback = GetCaller(...)
@@ -512,7 +563,7 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...
             end]]
 
             if RemoteSpyEnabled and Enabled["OnClientInvoke"] then
-                Log({What = Name, Method = "InvokeClient", Script = Info.short_src, Arguments = {...}, FunctionInfo = FunctionInfo, Info = Info, Response = not Success and "Script Error: "..Response or Response, Traceback = Traceback})
+                Log({self = self, What = Name, Method = "InvokeClient", Script = Info.short_src, Arguments = {...}, FunctionInfo = FunctionInfo, Info = Info, Response = not Success and "Script Error: "..Response or Response, Traceback = Traceback})
             end
 
             if not Success then
@@ -525,14 +576,14 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...
         NUB([=[local Success, Response = <<SafeCall>>(<<Function>>, ...)
 
         if <<getgenv>>().RemoteSpyEnabled and <<getgenv>>().Enabled["OnClientInvoke"] then
-            Log({What = <<Name>>, Method = "InvokeClient", Script = <<Info>>.short_src, Arguments = {...}, FunctionInfo = <<FunctionInfo>>, Info = <<Info>>, Response = not Success and "Script Error: "..Response or Response, Traceback = <<Traceback>>})
+            Log({self = <<self>> What = <<Name>>, Method = "InvokeClient", Script = <<Info>>.short_src, Arguments = {...}, FunctionInfo = <<FunctionInfo>>, Info = <<Info>>, Response = not Success and "Script Error: "..Response or Response, Traceback = <<Traceback>>})
         end
 
         if not Success then
             return;
         end
 
-        return unpack(Response)]=], {SafeCall = SafeCall, Function = Function, getgenv = getgenv, Name = Name, Info = Info, FunctionInfo = FunctionInfo, Traceback = Traceback})
+        return unpack(Response)]=], {SafeCall = SafeCall, Function = Function, getgenv = getgenv, Name = Name, self = self, Info = Info, FunctionInfo = FunctionInfo, Traceback = Traceback})
     end
 
     return OldNewIndex(...)
