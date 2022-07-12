@@ -1,8 +1,5 @@
 --[[
     Report any bugs, issues and detections to me if you don't mind
-
-    TODO:
-        Generate scripts (Coming soon, just need to finish the ability to customize PrintTable results)
 ]]
 
 if not PrintTable then
@@ -156,7 +153,7 @@ local function GetPath(Object, Sub)
         Path ..= GetPath(Parent, true)
     elseif Parent then
         Path ..= GetPath(Parent, true)
-    else
+    elseif Object ~= game then
         Path ..= ("nil"):reverse()
     end
     
@@ -170,8 +167,6 @@ end
 local function GenerateC(self, Method, Arguments)
     local R = PrintTable(Arguments, {NoIndentation = true, OneLine = true, NoComments = true, IgnoreNumberIndex = true, GenerateScript = true})
     local Result = R[1]
-    
-    Method = Method:gsub(" (Raw)", "")
 
     Result ..= ("%s:%s(%s)"):format(GetPath(self), Method, R[2])
     
@@ -180,7 +175,7 @@ end
 
 local function Log(Arguments, NewThread)
     local function Main()
-        local GeneratedCode = GenerateCode and GenerateC(Arguments.self, Arguments.Method, Arguments.Arguments) or "Disabled"
+        local GeneratedCode = GenerateCode and GenerateC(Arguments.self, Arguments.RawMethod or Arguments.Method, Arguments.Arguments) or "Disabled"
 
         for i, v in next, Arguments do
             if type(v) == "string" then
@@ -448,7 +443,7 @@ for Name, Method in next, Methods do
 
         if RemoteSpyEnabled and ArgGuard(self, unpack(Arguments)) and Enabled[self.ClassName] and not Ignore(self, unpack(Arguments)) then
             local Info, Traceback, Arguments = GetCaller({...}) --// Because the stack trace gets removed from _Args
-            local Method, Thread = Method.." (Raw)", coroutine.running()
+            Thread = coroutine.running()
 
             table.remove(Arguments, 1)
 
@@ -460,7 +455,7 @@ for Name, Method in next, Methods do
                         return coroutine.resume(Thread, unpack(Response))
                     end]]
         
-                    Log({self = self, What = GetPath(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
+                    Log({self = self, What = GetPath(self), RawMethod = Method, Method = Method .. " (Raw)", Script = Info.short_src, Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
 
                     repeat
                         task.wait()
@@ -472,7 +467,7 @@ for Name, Method in next, Methods do
                 return coroutine.yield()
             end
 
-            Log({self = self, What = GetPath(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Traceback = Traceback}, true)
+            Log({self = self, What = GetPath(self), RawMethod = Method, Method = Method .. " (Raw)", Script = Info.short_src, Arguments = Arguments, Info = Info, Traceback = Traceback}, true)
         end
 
         return Original(self, unpack(Arguments)) --unpack(Response)

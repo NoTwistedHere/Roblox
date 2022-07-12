@@ -112,7 +112,7 @@ local function GetPath(Object, Sub)
         Path ..= GetPath(Parent, true)
     elseif Parent then
         Path ..= GetPath(Parent, true)
-    else
+    elseif Object ~= game then
         Path ..= ("nil"):reverse()
     end
     
