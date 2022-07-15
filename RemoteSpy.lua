@@ -181,6 +181,11 @@ local function Log(Arguments, NewThread)
             if type(v) == "string" then
                 Arguments[i] = Stringify(v)
             elseif type(v) == "table" then
+                if i == "Traceback" then
+                    Arguments[i] = PrintTable(v, {NoComments = true, IgnoreNumberIndex = true})
+                    continue;
+                end
+
                 Arguments[i] = PrintTable(v)
             end
         end
