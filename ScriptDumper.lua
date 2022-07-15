@@ -51,7 +51,8 @@ end
 local LocalPlayer = Players.LocalPlayer
 local InstancesCreated, InstancesTotal = 0, #game:GetDescendants()
 local Place = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
-local MainDirectory, SubDirectory, FileName, FileType, Final = "Game Dumps/", game.PlaceId.."/", ("Scripts for %s [%s-%s]"):format(tostring(Place and Place.Name or "Unknown Game"):gsub("[^%w%s]", ""), game.GameId, game.PlaceVersion), ".rbxlx", ""
+local GameName = tostring(Place and Place.Name or "Unknown Game"):gsub("[^%w%s]", "")
+local MainDirectory, SubDirectory, FileName, FileType, Final = "Game Dumps/", ("%d-%s/"):format(game.PlaceId, GameName), ("Scripts for %s [%s-%s]"):format(GameName, game.GameId, game.PlaceVersion), ".rbxlx", ""
 
 if not isfolder(MainDirectory) then
     makefolder(MainDirectory)
