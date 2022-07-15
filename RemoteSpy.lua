@@ -286,7 +286,7 @@ local function GetCaller(Arguments)
         end
         
         if Info.source ~= Source then
-            table.insert(Traceback, ("%s:%d %s function %s"):format(Info.short_src, Info.currentline, Info.name ~= "" and "local" Info.Name ~= "" and Info.Name or "[N/A]"))
+            table.insert(Traceback, ("%s:%d %s function %s"):format(Info.short_src, Info.currentline, Info.name ~= "" and "local", Info.Name ~= "" and Info.Name or "[N/A]"))
         end
 
         if Info.what ~= "C" and not isexecutorfunction(Info.func) and not FirstInfo then
