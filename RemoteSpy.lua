@@ -511,6 +511,7 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
         end
 
         Log({self = self, What = GetPath(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Traceback = Traceback}, true)
+        setnamecallmethod(Method)
     end
 
     return OldNamecall(...) --unpack(Response)
