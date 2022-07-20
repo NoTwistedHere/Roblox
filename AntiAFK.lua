@@ -2,15 +2,71 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 local UserInputService = game:GetService("UserInputService")
 local Hooks = {}
 
+local function TrueString(String)
+    if type(String) ~= "string" then
+        return false
+    end
+
+    return (string.split(String, "\0"))[1]
+end
+
 local function SortArguments(self, ...)
     return self, {...}
 end
 
-local Old; Old = hookmetamethod(UserInputService.WindowFocused, "__index", function(...)
-    local self, Index = ...
-    local Response = Old(self, Index)
+local function hookGetSerivce(...)
+    local OldGetService; OldGetService = function(...)
+        local self, Index = ...
+        local Response = OldGetService(...)
+    
+        if type(Index) == "string" and TrueString(Index) == "VirtualInputManager" then
+            error(("'%s' is not a valid Service name"):format(TrueString(Index)))
+            return;
+        end
+    
+        return Response
+    end
+end
 
-    if (tostring(self):find("WindowFocused") or tostring(self):find("WindowFocusReleased")) and not table.find(Hooks, Response) then
+local OldFindService = hookfunction(game.FindService, function(...)
+    local self, Index = ...
+    local Response = OldFindService(...)
+
+    if type(Index) == "string" and TrueString(Index) == "VirtualInputManager" then
+        return OldFindService(self, "VirtualFuckOff")
+    end
+
+    return Response
+end)
+
+hookGetSerivce(game.GetService)
+hookGetSerivce(game.getService)
+hookGetSerivce(game.service)
+
+local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...)
+    local self, Arguments = SortArguments(...)
+    local Method = getnamecallmethod()
+
+    if typeof(self) == "Instance" and self == game and Method:lower():match("service") and TrueString(Arguments[1]) == "VirtualInputManager" then
+        local Success, Error = pcall(function()
+            setnamecallmethod(Method)
+            game[Method](game, "VirtualFuckOff")
+        end)
+
+        if not Error:match("is not a valid member") then
+            error(Error:replace("VirtualFuckOff", "VirtualInputManager"))
+            return;
+        end
+    end
+
+    return OldNamecall(...)
+end)
+
+local OldWindow; OldWindow = hookmetamethod(UserInputService.WindowFocused, "__index", function(...)
+    local self, Index = ...
+    local Response = OldWindow(...)
+
+    if type(Response) ~= "function" and (tostring(self):find("WindowFocused") or tostring(self):find("WindowFocusReleased")) and not table.find(Hooks, Response) then
         table.insert(Hooks, Response)
 
         if Index:lower() == "wait" then
