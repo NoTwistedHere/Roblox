@@ -362,6 +362,11 @@ if GetCallerV2 then
     local function HookFuncThread(Func)
         local Old; Old = hookfunction(Func, function(...)
             local _Args = {...}
+
+            if #_Args == 0 then
+                return Old(...)
+            end
+
             local Arguments = GetCallerV2 and V2CheckArguments(_Args)[3] or _Args
             local Call = table.remove(Arguments, 1)
     
@@ -396,8 +401,13 @@ if GetCallerV2 then
         end)
     end
 
-    local OldS; OldS = hookfunction(spawn, function(...)
+    local OldS; OldS = hookfunction(spawn, function(...) --// I'm sorry Melancholy, this is a quick patch before I go to work
         local _Args = {...}
+
+        if #_Args == 0 then
+            return OldS(...)
+        end
+
         local Arguments = GetCallerV2 and V2CheckArguments(_Args)[3] or _Args
         local Call = table.remove(Arguments, 1)
 
