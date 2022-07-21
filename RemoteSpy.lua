@@ -325,6 +325,11 @@ if GetCallerV2 then
     local function HookFunc(Func)
         local Old; Old = hookfunction(Func, function(...)
             local _Args = {...}
+
+            if #_Args == 0 then
+                return Old(...)
+            end
+
             local Arguments = GetCallerV2 and V2CheckArguments(_Args)[3] or _Args
             local Call = table.remove(Arguments, 1)
     
@@ -355,7 +360,7 @@ if GetCallerV2 then
                 return Old(Call, unpack(Arguments))
             end
     
-            return Old(Call, unpack(Arguments))
+            return Old(Call, ...)
         end)
     end
 
@@ -397,7 +402,7 @@ if GetCallerV2 then
                 return Old(Call, unpack(Arguments))
             end
     
-            return Old(Call, unpack(Arguments))
+            return Old(Call, ...)
         end)
     end
 
@@ -411,7 +416,7 @@ if GetCallerV2 then
         local Arguments = GetCallerV2 and V2CheckArguments(_Args)[3] or _Args
         local Call = table.remove(Arguments, 1)
 
-        if type(Call) ~= "function" and type(Call) ~= "thread" and (typeof(Call) ~= "userdata" and not getrawmetatable(Call).__call) then
+        if type(Call) ~= "function" and type(Call) ~= "thread" and typeof(Call) ~= "userdata" and (not getrawmetatable(Call) or not getrawmetatable(Call).__call) then
             return OldS(Call, unpack(Arguments))
         end
 
@@ -438,7 +443,7 @@ if GetCallerV2 then
             return OldS(Call, unpack(Arguments))
         end
 
-        return OldS(Call, unpack(Arguments))
+        return OldS(Call, ...)
     end)
 
     HookFunc(getrenv().coroutine.create)
