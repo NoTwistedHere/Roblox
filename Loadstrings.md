@@ -30,6 +30,7 @@ PrintTable({ workspace, 20, { pcall, 0X20 } }, {
     NoIndentation = false;
     MetatableKey = nil;
     GenerateScript = false;
+    NoAntiRep = false;
 })
 
 PrintArguments(a, "b", 1, game:GetService("Players"), pcall)
@@ -40,6 +41,7 @@ local Result = PrintTable({ 1, "b", game:GetService("Players").LocalPlayer}, {
     NoIndentation = false;
     MetatableKey = Key;
     GenerateScript = true;
+    NoAntiRep = false;
 }) --// Will return a table with two arguments, [1] will contain FindFunction(), [2] will contain the generated code
 
 local Proxy, Key = newproxy(true), game:GetService("HttpService"):GenerateGUID(false)
@@ -52,6 +54,7 @@ PrintTable({ workspace, 20, Proxy }, {
     NoIndentation = false;
     MetatableKey = Key;
     GenerateScript = false;
+    NoAntiRep = false;
 })
 ```
 
@@ -63,7 +66,7 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/
 ```lua
 WriteToFile = true
 RobloxConsole = false
-GetCallerV2 = false
+GetCallerV2 = false --// Cannot be enabled mid-game
 RemoteSpyEnabled = true
 GenerateCode = true
 Enabled = {

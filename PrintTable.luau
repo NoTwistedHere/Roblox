@@ -45,10 +45,10 @@ local function Unrep(String)
     return String, CountTable(Counts) > 0
 end
 
-local function AntiRep(String, ...) --// I'm too lazy
+local function AntiRep(Options, String, ...) --// I'm too lazy
     local Unicode = String:gsub("[^%a%c%d%l%p%s%u%x]", "")
 
-    if #Unicode > 2e3 then
+    if Options.NoAntiRep and #Unicode > 2e3 then
         return Unicode, ...
     end
 
@@ -142,7 +142,7 @@ local function Tostring(Object)
     return tostring(Object)
 end
 
-local function Stringify(String, Extra, Checked, Root)
+local function Stringify(String, Extra, Checked, Root, Options)
     local function Add(Message)
         if Checked and Root then
             Checked[String] = Message or Root
@@ -164,7 +164,7 @@ local function Stringify(String, Extra, Checked, Root)
         Add()
     end
     
-    return ConvertCodepoints(AntiRep(String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("%c", function(Char) return "\\"..string.byte(Char) end), Extra))
+    return ConvertCodepoints(AntiRep(Options, String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("%c", function(Char) return "\\"..string.byte(Char) end), Extra))
 end
 
 local function ParseObject(Object, DetailedInfo, TypeOf, Checked, Root, Options)
@@ -240,6 +240,7 @@ local function YieldableFunc(OriginalFunction) --// Used to work, don't know if 
         end]]):format(Variables, Values, Variables)))()
 
     hookfunction(New, OriginalFunction)
+
     return New
 end
 
@@ -248,9 +249,7 @@ local function CreateComment(Comment, Options, Existing)
         return ""
     end
 
-    local Base = Existing and " // %s" or (Options.NoIndentation and " --[[ %s ]]" or " --// %s")
-
-    return Base:format(Comment)
+    return (Existing and " // %s" or (Options.NoIndentation and " --[[ %s ]]" or " --// %s")):format(Comment)
 end
 
 local _PrintTable; _PrintTable = YieldableFunc(function(Table, Options, Indents, Checked, Root)
@@ -272,20 +271,6 @@ local _PrintTable; _PrintTable = YieldableFunc(function(Table, Options, Indents,
         local Key, Comment = Options.MetatableKey;
 
         if Key and Metatable and rawget(Metatable, Key) ~= nil then
-            --[[for i, v in next, Metatable do
-                if type(i) == "string" and i:match(Key) then
-                    print(i)
-
-                    if i ~= Key then
-                        local NewIndex = i:gsub("@"..Key, "")
-
-                        Metatable[NewIndex] = v
-                    end
-
-                    Metatable[i] = nil
-                end
-            end]]
-
             Table = rawget(Metatable, Key)
             Metatable = nil
             Comment = CreateComment("Defined by caller", Options)
