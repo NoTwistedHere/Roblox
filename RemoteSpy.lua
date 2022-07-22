@@ -594,7 +594,7 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...
         NUB([=[local Success, Response = <<SafeCall>>(<<Function>>, ...)
 
         if <<getgenv>>().RemoteSpyEnabled and <<getgenv>>().Enabled["OnClientInvoke"] then
-            Log({self = <<self>> What = <<Name>>, Method = "InvokeClient", Script = <<Info>>.short_src, Arguments = {...}, FunctionInfo = <<FunctionInfo>>, Info = <<Info>>, Response = not Success and "Script Error: "..Response or Response, Traceback = <<Traceback>>})
+            Log({self = <<self>>, What = <<Name>>, Method = "InvokeClient", Script = <<Info>>.short_src, Arguments = {...}, FunctionInfo = <<FunctionInfo>>, Info = <<Info>>, Response = not Success and "Script Error: "..Response or Response, Traceback = <<Traceback>>})
         end
 
         if not Success then
