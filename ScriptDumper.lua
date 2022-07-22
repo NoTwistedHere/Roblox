@@ -82,12 +82,58 @@ local function GiveColour(Current, Max)
     return (Current < Max * 0.25 and "@@RED@@") or (Current < Max * 0.5 and "@@YELLOW@@") or (Current < Max * 0.75 and "@@CYAN@@") or "@@GREEN@@"
 end
 
-local function ProgressBar(Current, Max)
-    local Size = 100
-    local Progress, Percentage = math.floor(Size * Current / Max), math.floor(100 * Current / Max)
-    rconsoleprint(GiveColour(Current, Max))
-    rconsoleprint(("\13%s%s %s"):format(("#"):rep(Progress), ("."):rep(Size - Progress), Percentage.."%"))
-    rconsoleprint("@@WHITE@@")
+local function GetLoading()
+    local SpinnerCount = 0
+
+    return function()
+        local Chars = { "|", "/", "—", "\\" }
+
+        SpinnerCount += 1
+
+        if SpinnerCount > #Chars then
+            SpinnerCount = 1
+        end
+
+        return " "..Chars[SpinnerCount]
+    end
+end
+
+local function ProgressBar(Header, Current, Max, Thread)
+    local Size, PreviousCur, PreviousMax, Complete = 80, Current, Max, Current == Max
+    local Loading = GetLoading()
+    local LoadingChar = Loading()
+
+    local function Update(Current, Max, Extra_After)
+        local Progress, Percentage = math.floor(Size * Current / Max), math.floor(100 * Current / Max)
+
+        if Complete then
+            return;
+        end
+
+        PreviousCur = Current
+        PreviousMax = Max
+        rconsoleprint(GiveColour(Current, Max))
+        rconsoleprint(("\13%s%s %s%s"):format(("#"):rep(Progress), ("."):rep(Size - Progress), Percentage.."%", Percentage == 100 and "!\n" or Extra_After or LoadingChar))
+        rconsoleprint("@@WHITE@@")
+
+        if Percentage == 100 then
+            Complete = true
+        end
+    end
+
+    rconsoleprint(Header.."\n")
+
+    task.spawn(function()
+        while not Complete and (not Thread and true or coroutine.status(Thread) ~= "dead") do
+            LoadingChar = Loading()
+            Update(PreviousCur, PreviousMax, LoadingChar)
+            task.wait(0.25)
+        end
+    end)
+
+    return function(...)
+        task.spawn(Update, ...)
+    end
 end
 
 local function CheckObject(Object)
@@ -136,7 +182,7 @@ local function SteralizeString(String)
     return String:gsub("['\"<>&]", SpecialCharacters)
 end
 
-local function MakeInstance(Object)
+local function MakeInstance(Object, PGB)
     local ClassName = GetClassName(Object)
 
     if not ClassName then
@@ -144,7 +190,6 @@ local function MakeInstance(Object)
     end
 
     local IntResult = ("<Item class=\"%s\" referent=\"RBX%s\"><Properties><string name=\"Name\">%s</string>"):format(ClassName, Object:GetDebugId(0), SteralizeString(Object.Name))
-    ProgressBar(InstancesCreated, InstancesTotal)
     
     if (ClassName == "LocalScript" or ClassName == "ModuleScript") then
         local Hash = getscripthash(Object)
@@ -160,12 +205,13 @@ local function MakeInstance(Object)
     IntResult ..= "</Properties>"
     for _, v in next, Object:GetChildren() do
         if v ~= nil and v ~= game and CheckObject(v) then --// Give me stength
-            IntResult ..= MakeInstance(v)
+            IntResult ..= MakeInstance(v, PGB)
         end
     end
 
     IntResult ..= "</Item>"
     InstancesCreated += 1
+    PGB(InstancesCreated, InstancesTotal)
 
     return IntResult
 end
@@ -173,26 +219,23 @@ end
 local function Save()
     Result ..= "</roblox>"
     
-    rconsoleprint("\n\nWriting to file\n")
-    ProgressBar(0, 1)
     writefile(Final, Result)
-    ProgressBar(1, 1)
 end
 
-local function GetScripts(Table)
+local function GetScripts(Table, C)
+    local PGB = ProgressBar(("Collecting Scripts [%s]"):format(C), 0, 1, coroutine.running())
+
     for i, v in next, Table do
         if (not v:IsA("LocalScript") and not v:IsA("ModuleScript")) or (v:IsDescendantOf(CoreGui) or v:IsDescendantOf(CorePackages)) or table.find(Scripts, v) then
             continue;
         end
 
-        ProgressBar(i, #Table)
+        PGB(i, #Table)
         
         table.insert(Scripts, v)
     end
 
-    ProgressBar(1, 1)
-
-    rconsoleprint("\n")
+    PGB(1, 1)
 end
 
 local function Decompile(...)
@@ -238,8 +281,7 @@ local function DecompileScripts()
     local Thread = coroutine.running()
     local RunningThreads = 0
 
-    rconsoleprint(("\nDecompiling Scripts [%s]\n"):format(#Scripts))
-    ProgressBar(0, #Scripts)
+    local PGB = ProgressBar(("\nDecompiling Scripts [%s]"):format(#Scripts), 0, #Scripts, Thread)
 
     for i = 1, Threads do
         task.spawn(function()
@@ -260,14 +302,14 @@ local function DecompileScripts()
                 end
 
                 Decompiled += 1
-                ProgressBar(Decompiled, #Scripts)
+                PGB(Decompiled, #Scripts)
                 task.wait()
             end
 
             RunningThreads -= 1
 
             if RunningThreads == 0 then
-                ProgressBar(1, 1)
+                PGB(1, 1)
                 coroutine.resume(Thread, true)
             end
         end)
@@ -279,20 +321,19 @@ end
 RunService:Set3dRenderingEnabled(false)
 rconsoleclear()
 rconsolename("Script Dumper")
-rconsoleprint("Collecting Scripts\n")
-GetScripts(getscripts())
-GetScripts(getnilinstances())
-GetScripts(game:GetDescendants())
+GetScripts(getscripts(), "Running")
+GetScripts(getnilinstances(), "Nil")
+GetScripts(game:GetDescendants(), "Game")
 DecompileScripts()
-rconsoleprint("\n\nCreating XML\n")
-ProgressBar(0, 1)
+
+local InstanceCreatedPGB = ProgressBar("\nCreating XML", InstancesCreated, InstancesTotal, coroutine.running())
 
 for i, v in next, game:GetChildren() do
     if v == CoreGui or v == CorePackages then
         continue;
     end
 
-    Result ..= MakeInstance(v)
+    Result ..= MakeInstance(v, InstanceCreatedPGB)
 end
 
 Result..= MakeInstance({
@@ -311,9 +352,9 @@ Result..= MakeInstance({
     IsA = function(_, IsA)
         return IsA == "Folder"
     end
-})
+}, InstanceCreatedPGB)
 
-ProgressBar(1, 1)
+InstanceCreatedPGB(1, 1)
 Save()
-rconsoleprint("\n\nFinished")
+rconsoleprint("\nFinished")
 RunService:Set3dRenderingEnabled(true)

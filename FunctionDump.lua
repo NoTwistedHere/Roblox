@@ -70,28 +70,36 @@ local function GetLoading()
     end
 end
 
-local function ProgressBar(Header, Thread, Current, Max)
-    local Size, PreviousCur, PreviousMax = 80, Current, Max
+local function ProgressBar(Header, Current, Max, Thread)
+    local Size, PreviousCur, PreviousMax, Complete = 80, Current, Max, Current == Max
     local Loading = GetLoading()
     local LoadingChar = Loading()
 
     local function Update(Current, Max, Extra_After)
         local Progress, Percentage = math.floor(Size * Current / Max), math.floor(100 * Current / Max)
 
+        if Complete then
+            return;
+        end
+
         PreviousCur = Current
         PreviousMax = Max
         rconsoleprint(GiveColour(Current, Max))
         rconsoleprint(("\13%s%s %s%s"):format(("#"):rep(Progress), ("."):rep(Size - Progress), Percentage.."%", Percentage == 100 and "!\n" or Extra_After or LoadingChar))
         rconsoleprint("@@WHITE@@")
+
+        if Percentage == 100 then
+            Complete = true
+        end
     end
 
     rconsoleprint(Header.."\n")
 
     task.spawn(function()
-        while PreviousCur < PreviousMax and coroutine.status(Thread) ~= "dead" do
+        while not Complete and (not Thread and true or coroutine.status(Thread) ~= "dead") do
             LoadingChar = Loading()
             Update(PreviousCur, PreviousMax, LoadingChar)
-            task.wait(0.5)
+            task.wait(0.25)
         end
     end)
 
@@ -182,7 +190,7 @@ getgenv().DumpScript = function(Source) --// Outdated, cba to update tbh
 
     rconsoleclear()
     rconsolename("FunctionDumper")
-    local CPB = ProgressBar("Collecting Functions", Thread, 0, 1)
+    local CPB = ProgressBar("Collecting Functions", 0, 1, Thread)
     writefile(Final, "")
 
     for i, v in next, getgc() do
@@ -195,7 +203,7 @@ getgenv().DumpScript = function(Source) --// Outdated, cba to update tbh
     end
 
     CPB(1, 1)
-    local CPB = ProgressBar(("Dumping Functions [%d]"):format(#Functions), Thread, 0, 1)
+    local CPB = ProgressBar(("Dumping Functions [%d]"):format(#Functions), 0, 1, Thread)
 
     table.sort(Functions, function(a, b) return a[2].currentline < b[2].currentline end)
 
@@ -221,7 +229,7 @@ getgenv().DumpFunctions = function()
 
     rconsoleclear()
     rconsolename("FunctionDumper")
-    local CPB = ProgressBar("Collecting Functions", Thread, 0, 1)
+    local CPB = ProgressBar("Collecting Functions", Thread, 0, 1,Thread)
 
     for i, v in next, GC do
         local Info = type(v) == "function" and islclosure(v) and not is_synapse_function(v) and getinfo(v)
@@ -238,7 +246,7 @@ getgenv().DumpFunctions = function()
     end
 
     CPB(1, 1)
-    local CPB = ProgressBar(("Dumping Functions [%d]"):format(TotalFunctions), Thread, 0, 1)
+    local CPB = ProgressBar(("Dumping Functions [%d]"):format(TotalFunctions), Thread, 0, 1, Thread)
     local Count = 0
     local Threads = Threading.new("Group")
 
