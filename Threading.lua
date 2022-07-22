@@ -3,11 +3,13 @@ script.Name = "Threading.lua"
 local Threading = {}
 local Signalling = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/Signalling.lua"))()
 
-function Threading.new()
+function Threading.new(Option)
     return setmetatable({
         Threads = 0;
         Active = 0;
-        Ended = Signalling.new()
+        Option = Option;
+        Ended = Signalling.new();
+        Available = Option == "Group" and Signalling.new();
     }, { __index = Threading })
 end
 
@@ -21,6 +23,8 @@ function Threading:Add(Function)
 
         if self.Active == 0 then
             self.Ended:Fire()
+        elseif self.Available then
+            self.Available:Fire()
         end
     end)()
 

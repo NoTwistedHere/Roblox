@@ -9,6 +9,9 @@ local Place = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
 local Global, Local = "Function Dumps/", ("%s [%d]/"):format(tostring(Place and Place.Name or "Unknown Game"):gsub("[^%w%s]", ""), game.PlaceId)
 local Key = game:GetService("HttpService"):GenerateGUID(false)
 
+getgenv().FunctionsPerThread = FunctionsPerThread or 200
+getgenv().ScriptsPerThread = ScriptsPerThread or 5
+
 local function ConvertCodepoints(OriginalString)
     if OriginalString:match("[^%a%c%d%l%p%s%u%x]") or OriginalString:match("[\\/:*?\"<>|]") then
         local String = ""
@@ -237,29 +240,59 @@ getgenv().DumpFunctions = function()
     CPB(1, 1)
     local CPB = ProgressBar(("Dumping Functions [%d]"):format(TotalFunctions), Thread, 0, 1)
     local Count = 0
+    local Threads = Threading.new("Group")
 
     for Source, Dump in next, Scripts do
-        local Final, FinalData, Thread = CheckFile(Directory, Source), {}, Threading.new()
+        if Threads.Active == ScriptsPerThread then
+            Threads.Available:Wait()
 
-        for ThreadNum = 0, math.ceil(#Dump / 200) - 1 do
-            Thread:Add(function()
-                for TIndex = 1, 201 do
-                    local Data = Dump[TIndex + (200 * ThreadNum)]
+            Threads:Add(function()
+                local Final, FinalData, Thread = CheckFile(Directory, Source), {}, Threading.new()
 
-                    if not Data then
-                        break;
-                    end
+                table.sort(Dump, function(a, b) return a[2].currentline < b[2].currentline end)
 
-                    FinalData[Data[2].currentline] = {Data[2].currentline, PrintTable(Write(Data[1]), {MetatableKey = Key}).."\n"}
-                    Count += 1
-                    CPB(Count, TotalFunctions)
+                writefile(Final, "")
+
+                for ThreadNum = 0, math.ceil(#Dump / FunctionsPerThread) - 1 do
+                    Thread:Add(function()
+                        for TIndex = 1, 201 do
+                            local Data, FDCount, FDWrite = Dump[TIndex + (FunctionsPerThread * ThreadNum)], 0, {};
+
+                            if not Data then
+                                continue;
+                            end
+
+                            FinalData[Data[2].currentline] = {Data[2].currentline, PrintTable(Write(Data[1]), {MetatableKey = Key}).."\n"}
+
+                            for i, v in next, FinalData do
+                                if FDCount == 0 then
+                                    FDCount = i
+                                end
+
+                                if i <= Data[2].currentline and FDCount == i then
+                                    table.insert(FDWrite, v)
+                                    FinalData[i] = nil
+                                    FDCount += 1
+                                else
+                                    break;
+                                end
+                            end
+
+                            appendfile(Final, Get(FDWrite))
+
+                            Count += 1
+                            CPB(Count, TotalFunctions)
+                        end
+                    end)
                 end
-            end)
-        end
+
+                Thread.Ended:Wait()
+                --table.sort(FinalData, function(a, b) return a[1] < b[1] end)
+                --writefile(Final, Get(FinalData))
+            end
+        end)
 
         Thread.Ended:Wait()
-        table.sort(FinalData, function(a, b) return a[1] < b[1] end)
-        writefile(Final, Get(FinalData))
     end
 
     rconsoleprint("Finished")
