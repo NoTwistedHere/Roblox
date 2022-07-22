@@ -190,7 +190,7 @@ getgenv().DumpScript = function(Source) --// Outdated, cba to update tbh
 
     rconsoleclear()
     rconsolename("FunctionDumper")
-    local CPB = ProgressBar("Collecting Functions", 0, 1, Thread)
+    local CPB = ProgressBar("\nCollecting Functions", 0, 1, Thread)
     writefile(Final, "")
 
     for i, v in next, getgc() do
@@ -203,7 +203,7 @@ getgenv().DumpScript = function(Source) --// Outdated, cba to update tbh
     end
 
     CPB(1, 1)
-    local CPB = ProgressBar(("Dumping Functions [%d]"):format(#Functions), 0, 1, Thread)
+    local CPB = ProgressBar(("\nDumping Functions [%d]"):format(#Functions), 0, 1, Thread)
 
     table.sort(Functions, function(a, b) return a[2].currentline < b[2].currentline end)
 
@@ -229,7 +229,7 @@ getgenv().DumpFunctions = function()
 
     rconsoleclear()
     rconsolename("FunctionDumper")
-    local CPB = ProgressBar("Collecting Functions", Thread, 0, 1,Thread)
+    local CPB = ProgressBar("\nCollecting Functions", Thread, 0, 1,Thread)
 
     for i, v in next, GC do
         local Info = type(v) == "function" and islclosure(v) and not is_synapse_function(v) and getinfo(v)
@@ -246,7 +246,7 @@ getgenv().DumpFunctions = function()
     end
 
     CPB(1, 1)
-    local CPB = ProgressBar(("Dumping Functions [%d]"):format(TotalFunctions), Thread, 0, 1, Thread)
+    local CPB = ProgressBar(("\nDumping Functions [%d]"):format(TotalFunctions), Thread, 0, 1, Thread)
     local Count = 0
     local Threads = Threading.new("Group")
 
