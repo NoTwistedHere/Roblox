@@ -1,5 +1,7 @@
 --// I'm tired of 'too many upvalues' so I decided to create a little module instead of doing it manually
 
+script.name = "NoUpvalueHook.lua"
+
 return function(src, Upvalues) --// See the example below
     local RUpvalues = {}
     src = src:gsub("<<(%w*)>>", function(Local)

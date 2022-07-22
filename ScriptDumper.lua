@@ -1,3 +1,5 @@
+script.name = "ScriptDumper.lua"
+
 local CoreGui, CorePackages, Players, RunService, RunService = game:GetService("CoreGui"), game:GetService("CorePackages"), game:GetService("Players"), game:GetService("RunService"), game:GetService("RunService")
 local Result = "<roblox xmlns:xmime=\"http://www.w3.org/2005/05/xmlmime\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"http://www.roblox.com/roblox.xsd\" version=\"4\">"
 local Decompiled, Scripts = 0, {}

@@ -2,6 +2,8 @@
     Report any bugs, issues and detections to me if you don't mind
 ]]
 
+script.name = "RemoteSpy.lua"
+
 if not PrintTable then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/PrintTable.luau"))()
 end

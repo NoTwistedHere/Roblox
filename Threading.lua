@@ -1,3 +1,5 @@
+script.Name = "Threading.lua"
+
 local Threading = {}
 local Signaling = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/Signalling.lua"))()
 

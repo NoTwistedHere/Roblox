@@ -1,3 +1,5 @@
+script.Name = "Signalling.lua"
+
 local Signaling = {} --// Is that right?
 local getthreadidentity, setthreadidentity = getthreadidentity or syn.get_thread_identity, setthreadidentity or syn.set_thread_identity
 
@@ -46,4 +48,4 @@ function Signaling.new()
     return setmetatable({ Callbacks = {} }, { __index = Signaling })
 end
 
-return Signalling
+return Signaling
