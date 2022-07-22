@@ -1,23 +1,15 @@
 script.Name = "Signalling.lua"
 
 local Signalling = {} --// Is that right?
-local getthreadidentity, setthreadidentity = getthreadidentity or syn.get_thread_identity, setthreadidentity or syn.set_thread_identity
-
-local function CallFunc(Identity, Function, ...)
-    local Old = getthreadidentity()
-    setthreadidentity(Identity)
-    Function(...)
-    setthreadidentity(Old)
-end
 
 function Signalling:Fire(...)
     self.Fired = true
 
     for i, v in next, self.Callbacks do
         if type(v) == "function" then
-            CallFunc(getthreadidentity(v), task.spawn, v, ...)
+            task.spawn(v, ...)
         elseif type(v) == "thread" then
-            CallFunc(getthreadidentity(v), task.spawn, coroutine.resume, v, ...)
+            task.spawn(coroutine.resume, v, ...)
         end
     end
 
