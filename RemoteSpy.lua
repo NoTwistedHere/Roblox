@@ -34,7 +34,7 @@ local HttpService = game:GetService("HttpService")
 local isexecutorfunction = isexecutorfunction or is_synapse_function or isexecutorclosure or isourclosure or function(f) return getinfo(f, "s").source:find("@") and true or false end
 local getthreadidentity = getthreadidentity or syn.get_thread_identity
 local setthreadidentity = setthreadidentity or syn.set_thread_identity
-local isvalidlevel = debug.isvalidlevel or debug.validlevel or function(s) local k = pcall(function() return getinfo(s + 3) end return k end)
+local isvalidlevel = debug.isvalidlevel or debug.validlevel or function(s) local k = pcall(function() return getinfo(s + 3) end) return k end
 local hookmetamethod = hookmetamethod or newcclosure(function(Object, Metamethod, Function)
     local Metatable = assert(getrawmetatable(Object), ("bad argument #1 (%s does not have a metatable)"):format(tostring(typeof(Object))))
     local Original = assert(rawget(Metatable, Metamethod), "bad argument #2 (metamethod doesn't exist)")
