@@ -244,7 +244,7 @@ getgenv().DumpFunctions = function()
 
     for Source, Dump in next, Scripts do
         if Threads.Active == ScriptsPerThread then
-            Threads.Available:Wait()
+            Threads.Available:Wait("fg")
         end
 
         Threads:Add(function()
@@ -287,7 +287,7 @@ getgenv().DumpFunctions = function()
                 end)
             end
 
-            Thread.Ended:Wait()
+            Thread.Ended:Wait("f")
             --table.sort(FinalData, function(a, b) return a[1] < b[1] end)
             --writefile(Final, Get(FinalData))
         end)

@@ -20,11 +20,18 @@ function Threading:Add(Function)
     coroutine.wrap(function() --// task.spawn takes the piss; it takes a lot longer to call task.* than spawn/delay/coroutine.*
         Function()
         self.Active -= 1
-
-        if self.Active == 0 then
-            self.Ended:Fire()
-        elseif self.Available then
+        
+        if self.Available then
             self.Available:Fire()
+            task.wait()
+            
+            if self.Active == 0 then
+                self.Ended:Fire()
+            end
+        end
+
+        if not self.Available and self.Active == 0 then
+            self.Ended:Fire()
         end
     end)()
 

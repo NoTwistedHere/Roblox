@@ -10,14 +10,15 @@ function Signalling:Fire(...)
             task.spawn(v, ...)
         elseif type(v) == "thread" then
             task.spawn(coroutine.resume, v, ...)
+            table.remove(self.Callbacks, table.find(v))
         end
     end
 
     return Signalling
 end
 
-function Signalling:Wait(Arg)
-    if self.Active == 0 or (Arg == "f" and self.Fired) then
+function Signalling:Wait(Arg, C)
+    if self.Active == 0 or (Arg == "f" and self.Fired) or (Arg == "fg" and self.Active ~= C) then
         return;
     end
 
