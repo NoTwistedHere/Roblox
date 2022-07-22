@@ -1,6 +1,6 @@
 script.Name = "Signalling.lua"
 
-local Signaling = {} --// Is that right?
+local Signalling = {} --// Is that right?
 local getthreadidentity, setthreadidentity = getthreadidentity or syn.get_thread_identity, setthreadidentity or syn.set_thread_identity
 
 local function CallFunc(Identity, Function, ...)
@@ -10,7 +10,7 @@ local function CallFunc(Identity, Function, ...)
     setthreadidentity(Old)
 end
 
-function Signaling:Fire(...)
+function Signalling:Fire(...)
     self.Fired = true
 
     for i, v in next, self.Callbacks do
@@ -21,10 +21,10 @@ function Signaling:Fire(...)
         end
     end
 
-    return Signaling
+    return Signalling
 end
 
-function Signaling:Wait(Arg)
+function Signalling:Wait(Arg)
     if self.Active == 0 or (Arg == "f" and self.Fired) then
         return;
     end
@@ -34,7 +34,7 @@ function Signaling:Wait(Arg)
     return coroutine.yield()
 end
 
-function Signaling:Connect(Callback)
+function Signalling:Connect(Callback)
     if self.Active == 0 then
         return;
     end
@@ -44,8 +44,12 @@ function Signaling:Connect(Callback)
     return self
 end
 
-function Signaling.new()
-    return setmetatable({ Callbacks = {} }, { __index = Signaling })
+function Signalling:Disconnect(Callback)
+    table.remove(self.Callbacks, table.find(self.Callbacks, Callback))
 end
 
-return Signaling
+function Signalling.new()
+    return setmetatable({ Callbacks = {} }, { __index = Signalling })
+end
+
+return Signalling

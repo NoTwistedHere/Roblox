@@ -1,4 +1,4 @@
-script.name = "FunctionDump.lua"
+script.Name = "FunctionDump.lua"
 
 if not PrintTable then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/PrintTable.luau"))()

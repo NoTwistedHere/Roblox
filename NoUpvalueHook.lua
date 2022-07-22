@@ -1,6 +1,6 @@
 --// I'm tired of 'too many upvalues' so I decided to create a little module instead of doing it manually
 
-script.name = "NoUpvalueHook.lua"
+script.Name = "NoUpvalueHook.lua"
 
 return function(src, Upvalues) --// See the example below
     local RUpvalues = {}

@@ -1,13 +1,13 @@
 script.Name = "Threading.lua"
 
 local Threading = {}
-local Signaling = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/Signalling.lua"))()
+local Signalling = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/Signalling.lua"))()
 
 function Threading.new()
     return setmetatable({
         Threads = 0;
         Active = 0;
-        Ended = Signaling.new()
+        Ended = Signalling.new()
     }, { __index = Threading })
 end
 
