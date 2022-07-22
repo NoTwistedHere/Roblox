@@ -142,7 +142,7 @@ local function Tostring(Object)
     return tostring(Object)
 end
 
-local function Stringify(String, Extra, Checked, Root, Options)
+local function Stringify(String, Options, Extra, Checked, Root)
     local function Add(Message)
         if Checked and Root then
             Checked[String] = Message or Root
@@ -173,14 +173,14 @@ local function ParseObject(Object, DetailedInfo, TypeOf, Checked, Root, Options)
     
     local function _Parse()
         if ObjectType == 2 then
-            local String, Modified = Stringify(Object, true, Checked, Root)
+            local String, Modified = Stringify(Object, Options, true, Checked, Root)
             return String, Modified
         elseif ObjectType == 3 then
             --return Stringify(GetPath(Object), false, Checked, Root), " ClassName: "..Object.ClassName
             return GetPath(Object), " ClassName: "..Object.ClassName
         elseif ObjectType == 5 then
             local Info = getinfo(Object)
-            return ("%s"):format(tostring(Object)), (" source: %s, what: %s, name: %s (currentline: %s, numparams: %s, nups: %s, is_vararg: %s)"):format(Stringify(Info.source), Info.what, Stringify(Info.name), Info.currentline, Info.numparams, Info.nups, Info.is_vararg)
+            return ("%s"):format(tostring(Object)), (" source: %s, what: %s, name: %s (currentline: %s, numparams: %s, nups: %s, is_vararg: %s)"):format(Stringify(Info.source, Options), Info.what, Stringify(Info.name, Options), Info.currentline, Info.numparams, Info.nups, Info.is_vararg)
         else
             return Tostring(Object)
         end
@@ -296,7 +296,7 @@ local _PrintTable; _PrintTable = YieldableFunc(function(Table, Options, Indents,
 
                 local Index, Value = Data[1], Data[2]
 
-                local NewRoot = Root..("[%s]"):format(Stringify(Index))
+                local NewRoot = Root..("[%s]"):format(Stringify(Index, Options))
                 local AlreadyLogged = type(Value) == "table" and (Checked[Value] or CheckForClone(Checked, Value))
 
                 local function Format(...)
