@@ -33,7 +33,7 @@ local OldFindService = hookfunction(game.FindService, function(...)
     local Response = OldFindService(...)
 
     if type(Index) == "string" and TrueString(Index) == "VirtualInputManager" then
-        return OldFindService(self, "VirtualFuckOff")
+        return;
     end
 
     return Response
@@ -48,6 +48,10 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
     local Method = getnamecallmethod()
 
     if typeof(self) == "Instance" and self == game and Method:lower():match("service") and TrueString(Arguments[1]) == "VirtualInputManager" then
+        if Method == "FindService" then
+            return;
+        end
+
         local Success, Error = pcall(function()
             setnamecallmethod(Method)
             game[Method](game, "VirtualFuckOff")
