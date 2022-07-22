@@ -245,55 +245,55 @@ getgenv().DumpFunctions = function()
     for Source, Dump in next, Scripts do
         if Threads.Active == ScriptsPerThread then
             Threads.Available:Wait()
+        end
 
-            Threads:Add(function()
-                local Final, FinalData, Thread = CheckFile(Directory, Source), {}, Threading.new()
+        Threads:Add(function()
+            local Final, FinalData, Thread = CheckFile(Directory, Source), {}, Threading.new()
 
-                table.sort(Dump, function(a, b) return a[2].currentline < b[2].currentline end)
+            table.sort(Dump, function(a, b) return a[2].currentline < b[2].currentline end)
 
-                writefile(Final, "")
+            writefile(Final, "")
 
-                for ThreadNum = 0, math.ceil(#Dump / FunctionsPerThread) - 1 do
-                    Thread:Add(function()
-                        for TIndex = 1, 201 do
-                            local Data, FDCount, FDWrite = Dump[TIndex + (FunctionsPerThread * ThreadNum)], 0, {};
+            for ThreadNum = 0, math.ceil(#Dump / FunctionsPerThread) - 1 do
+                Thread:Add(function()
+                    for TIndex = 1, 201 do
+                        local Data, FDCount, FDWrite = Dump[TIndex + (FunctionsPerThread * ThreadNum)], 0, {};
 
-                            if not Data then
-                                continue;
-                            end
-
-                            FinalData[Data[2].currentline] = {Data[2].currentline, PrintTable(Write(Data[1]), {MetatableKey = Key}).."\n"}
-
-                            for i, v in next, FinalData do
-                                if FDCount == 0 then
-                                    FDCount = i
-                                end
-
-                                if i <= Data[2].currentline and FDCount == i then
-                                    table.insert(FDWrite, v)
-                                    FinalData[i] = nil
-                                    FDCount += 1
-                                else
-                                    break;
-                                end
-                            end
-
-                            appendfile(Final, Get(FDWrite))
-
-                            Count += 1
-                            CPB(Count, TotalFunctions)
+                        if not Data then
+                            continue;
                         end
-                    end)
-                end
 
-                Thread.Ended:Wait()
-                --table.sort(FinalData, function(a, b) return a[1] < b[1] end)
-                --writefile(Final, Get(FinalData))
+                        FinalData[Data[2].currentline] = {Data[2].currentline, PrintTable(Write(Data[1]), {MetatableKey = Key}).."\n"}
+
+                        for i, v in next, FinalData do
+                            if FDCount == 0 then
+                                FDCount = i
+                            end
+
+                            if i <= Data[2].currentline and FDCount == i then
+                                table.insert(FDWrite, v)
+                                FinalData[i] = nil
+                                FDCount += 1
+                            else
+                                break;
+                            end
+                        end
+
+                        appendfile(Final, Get(FDWrite))
+
+                        Count += 1
+                        CPB(Count, TotalFunctions)
+                    end
+                end)
             end
-        end)
 
-        Thread.Ended:Wait()
+            Thread.Ended:Wait()
+            --table.sort(FinalData, function(a, b) return a[1] < b[1] end)
+            --writefile(Final, Get(FinalData))
+        end)
     end
+
+    Threads.Ended:Wait()
 
     rconsoleprint("Finished")
 end
