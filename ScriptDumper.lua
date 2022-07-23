@@ -1,5 +1,6 @@
 script.Name = "ScriptDumper.lua"
 
+local Threading = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/Threading.lua"))()
 local CoreGui, CorePackages, Players, RunService, RunService = game:GetService("CoreGui"), game:GetService("CorePackages"), game:GetService("Players"), game:GetService("RunService"), game:GetService("RunService")
 local Result = "<roblox xmlns:xmime=\"http://www.w3.org/2005/05/xmlmime\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"http://www.roblox.com/roblox.xsd\" version=\"4\">"
 local Decompiled, Scripts = 0, {}
@@ -243,21 +244,23 @@ local function Decompile(...)
         return decompile(...)
     --end
 
-    --[[local Thread = coroutine.running()
+    --[[local Thread, Completed = coroutine.running(), false
     local DecompThread = task.spawn(function(...)
         local Source = decompile(...)
+
+        Completed = true
 
         if coroutine.status(Thread) ~= "suspended" then
             repeat
                 task.wait(0.2) --// There's no rush
             until coroutine.status(Thread) == "suspended"
         end
-        
+
         return coroutine.resume(Thread, Source)
     end, ...)
 
     task.delay(Timeout, function()
-        if coroutine.status(Thread) ~= "suspended" then
+        if Completed then
             return;
         end
 
@@ -278,44 +281,38 @@ local function FindNextScript()
 end
 
 local function DecompileScripts()
-    local Thread = coroutine.running()
-    local RunningThreads = 0
+    local Threads = Threading.new("Group")
+    local Ended = false
+    local PGB = ProgressBar(("\nDecompiling Scripts [%s]"):format(#Scripts), 0, #Scripts, coroutine.running())
 
-    local PGB = ProgressBar(("\nDecompiling Scripts [%s]"):format(#Scripts), 0, #Scripts, Thread)
+    while true do
+        if Ended then
+            break;
+        elseif Threads.Active == Threads then
+            Threads.Available:Wait("fg")
+        end
 
-    for i = 1, Threads do
-        task.spawn(function()
-            RunningThreads += 1
+        Threads:Add(function()
+            local Script = FindNextScript()
 
-            while true do
-                local Script = FindNextScript()
-
-                if not Script then
-                    break;
-                end
-
-                local Hash = getscripthash(Script)
-
-                if Hash and not DecompiledScripts[Hash] then    
-                    DecompiledScripts[Hash] = "--// Decompiling..."
-                    DecompiledScripts[Hash] = Decompile(Script) or "--// Failed to decompile"
-                end
-
-                Decompiled += 1
-                PGB(Decompiled, #Scripts)
-                task.wait()
+            if not Script then
+                Ended = true
+                return;
             end
 
-            RunningThreads -= 1
+            local Hash = getscripthash(Script)
 
-            if RunningThreads == 0 then
-                PGB(1, 1)
-                coroutine.resume(Thread, true)
+            if Hash and not DecompiledScripts[Hash] then    
+                DecompiledScripts[Hash] = "--// Decompiling..."
+                DecompiledScripts[Hash] = Decompile(Script) or "--// Failed to decompile"
             end
+
+            Decompiled += 1
+            PGB(Decompiled, #Scripts)
         end)
     end
 
-    return coroutine.yield()
+    Threads.Ended:Wait()
 end
 
 RunService:Set3dRenderingEnabled(false)
