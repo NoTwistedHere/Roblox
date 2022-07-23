@@ -10,7 +10,7 @@ function Signalling:Fire(...)
             task.spawn(v, ...)
         elseif type(v) == "thread" then
             task.spawn(coroutine.resume, v, ...)
-            table.remove(self.Callbacks, table.find(v))
+            table.remove(self.Callbacks, table.find(self.Callbacks, v))
         end
     end
 
