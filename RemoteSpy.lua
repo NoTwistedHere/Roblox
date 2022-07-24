@@ -463,34 +463,38 @@ for Name, Method in next, Methods do
         local Arguments = GetCallerV2 and V2CheckArguments(_Args)[3] or _Args
         local self = table.remove(Arguments, 1)
 
-        if RemoteSpyEnabled and ArgGuard(self, unpack(Arguments)) and Enabled[self.ClassName] and not Ignore(self, unpack(Arguments)) then
-            local Info, Traceback, Arguments = GetCaller({...}) --// Because the stack trace gets removed from _Args
-            Thread = coroutine.running()
+        --xpcall(function(...)
+            if RemoteSpyEnabled and ArgGuard(self, unpack(Arguments)) and Enabled[self.ClassName] and not Ignore(self, unpack(Arguments)) then
+                local Info, Traceback, Arguments = GetCaller({...}) --// Because the stack trace gets removed from _Args
+                Thread = coroutine.running()
 
-            table.remove(Arguments, 1)
+                table.remove(Arguments, 1)
 
-            if self.ClassName:match("Function") then --// Events return nil so what's the point in yielding? just leads to retarded detections
-                task.spawn(function()
-                    local Success, Response = SortArguments(pcall(Original, self, unpack(Arguments)))
+                if self.ClassName:match("Function") then --// Events return nil so what's the point in yielding? just leads to retarded detections
+                    task.spawn(function()
+                        local Success, Response = SortArguments(pcall(Original, self, unpack(Arguments)))
 
-                    --[[if not Success then
-                        return coroutine.resume(Thread, unpack(Response))
-                    end]]
-        
-                    Log({self = self, What = GetPath(self), RawMethod = Method, Method = Method .. " (Raw)", Script = Info.short_src, Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
+                        --[[if not Success then
+                            return coroutine.resume(Thread, unpack(Response))
+                        end]]
+            
+                        Log({self = self, What = GetPath(self), RawMethod = Method, Method = Method .. " (Raw)", Script = Info.short_src, Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
 
-                    repeat
-                        task.wait()
-                    until coroutine.status(Thread) == "suspended"
-        
-                    coroutine.resume(Thread, unpack(Response))
-                end)
-        
-                return coroutine.yield()
+                        repeat
+                            task.wait()
+                        until coroutine.status(Thread) == "suspended"
+            
+                        coroutine.resume(Thread, unpack(Response))
+                    end)
+            
+                    return coroutine.yield()
+                end
+
+                Log({self = self, What = GetPath(self), RawMethod = Method, Method = Method .. " (Raw)", Script = Info.short_src, Arguments = Arguments, Info = Info, Traceback = Traceback}, true)
             end
-
-            Log({self = self, What = GetPath(self), RawMethod = Method, Method = Method .. " (Raw)", Script = Info.short_src, Arguments = Arguments, Info = Info, Traceback = Traceback}, true)
-        end
+        --[[end, function(e)
+            warn(e)
+        end, ...)]]
 
         return Original(self, unpack(Arguments)) --unpack(Response)
     end)
