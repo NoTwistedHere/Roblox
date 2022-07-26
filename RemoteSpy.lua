@@ -20,6 +20,14 @@ getgenv().Enabled = Enabled or {
     RemoteEvent = true;
     RemoteFunction = true;
     OnClientInvoke = true;
+    OnClientEvent = true;
+    OnInvoke = false;
+    Event = false;
+}
+local Events = {
+    BindableEvent = "Event";
+    BindableFunction = "OnInvoke";
+    RemoteEvent = "OnClientEvent";
 }
 local Methods = {
     BindableEvent = "Fire";
@@ -196,6 +204,8 @@ local function Log(Arguments, NewThread)
             return Save(("What: %s\nMethod: %s\nTo Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s\nFunctionInfo: %s\nTraceback: %s\nGenerated Code:\n%s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Timestamp(), Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.FunctionInfo, Arguments.Traceback, GeneratedCode))
         elseif Arguments.Response then
             return Save(("What: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s\nTraceback: %s\nGenerated Code:\n%s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Timestamp(), Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.Traceback, GeneratedCode))
+        elseif not Arguments.Info then
+            return Save(("What: %s\nMethod: %s\nTimestamp: %s\nArguments: %s\nGenerated Code:\n%s\n"):format(Arguments.What, Arguments.Method, Timestamp(), Arguments.Arguments, GeneratedCode))
         end
 
         Save(("What: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s\nTraceback: %s\nGenerated Code:\n%s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Timestamp(), Arguments.Arguments, Arguments.Info, Arguments.Traceback, GeneratedCode))
@@ -566,6 +576,32 @@ end
 
 local function IsValidIndex(Index)
     return rawequal(Index, "OnClientInvoke") or rawequal(Index, "onClientInvoke")
+end
+
+local function Listen(Instance, Event)
+    Instance[Event](Instance, function(...)
+        if Enabled[Event] then
+            Log({self = Instance, What = GetPath(Instance), Method = Event, Arguments = {...}})
+        end
+    end)
+end
+
+game.DescendantAdded:Connect(function(Obj)
+    if Methods[Obj.ClassName] and Events[Obj.ClassName] then
+        Listen(Obj, Events[Obj.ClassName])
+    end
+end)
+
+for i, v in next, game:GetDescendants() do
+    if Methods[v.ClassName] and Events[v.ClassName] then
+        Listen(v, Events[v.ClassName])
+    end
+end
+
+for i, v in next, getnilinstances() do
+    if Methods[v.ClassName] and Events[v.ClassName] then
+        Listen(v, Events[v.ClassName])
+    end
 end
 
 local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...)
