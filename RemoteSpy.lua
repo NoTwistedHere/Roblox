@@ -579,7 +579,7 @@ local function IsValidIndex(Index)
 end
 
 local function Listen(Instance, Event)
-    Instance[Event](Instance, function(...)
+    Instance[Event]:Connect(function(...)
         if Enabled[Event] then
             Log({self = Instance, What = GetPath(Instance), Method = Event, Arguments = {...}})
         end
