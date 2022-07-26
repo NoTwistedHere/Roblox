@@ -610,3 +610,46 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...
 
     return OldNewIndex(...)
 end)
+
+--[[
+local function CountTable(Table)
+    local Count = 0
+
+    for _ in next, Table do
+        Count += 1
+    end
+
+    return Count
+end
+
+local function FixTable(Table)
+    local Yeah = {}
+
+    for i, v in next, Table do
+        table.insert(Yeah, v)
+    end
+
+    return Yeah
+end
+
+local function Unpack(Table, ...)
+    if CountTable(Table) > 7999 then
+        local New = {}
+        local Count = 0
+
+        for i, v in next, Table do
+            if Count < 7999 and v then
+                Count += 1
+                table.insert(New, v)
+                Table[i] = nil
+            end
+        end
+
+        return Unpack(FixTable(Table), unpack(New))
+    end
+
+    return ..., unpack(Table)
+end
+
+print(Unpack({unpack(table.create(7999, "woah")), unpack(table.create(7999, "woah"))}))
+]]
