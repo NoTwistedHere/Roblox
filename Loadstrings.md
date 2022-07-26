@@ -75,6 +75,9 @@ Enabled = {
     RemoteEvent = true;
     RemoteFunction = true;
     OnClientInvoke = true;
+    OnClientEvent = true;
+    OnInvoke = false;
+    Event = false;
 }
 loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/RemoteSpy.lua"))()
 ```
