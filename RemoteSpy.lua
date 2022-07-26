@@ -11,7 +11,7 @@ local NUB = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwisted
 
 getgenv().WriteToFile = WriteToFile or false
 getgenv().RobloxConsole = RobloxConsole or false
-getgenv().GetCallerV2 = GetCallerV2 or false --// BETA
+getgenv().GetCallerV2 = GetCallerV2 or false --// BETA - You are more vulnerable to detections!
 getgenv().RemoteSpyEnabled = RemoteSpyEnabled or true
 getgenv().GenerateCode = GenerateCode or false
 getgenv().Enabled = Enabled or {
@@ -466,6 +466,14 @@ if GetCallerV2 then
     HookFuncThread(getrenv().task.delay)
 end
 
+local function ReturnArguments(Arguments, ...)
+    if GetCallerV2 then
+        return unpack(Arguments)
+    end
+
+    return ...
+end
+
 for Name, Method in next, Methods do
     local Func = Instance.new(Name)[Method]
     local Original; Original = hookfunction(Func, function(...)
@@ -474,7 +482,7 @@ for Name, Method in next, Methods do
         local self = table.remove(Arguments, 1)
 
         --xpcall(function(...)
-            if RemoteSpyEnabled and ArgGuard(self, unpack(Arguments)) and Enabled[self.ClassName] and not Ignore(self, unpack(Arguments)) then
+            if RemoteSpyEnabled and ArgGuard(self, ReturnArguments(Arguments, ...)) and Enabled[self.ClassName] and not Ignore(self, ReturnArguments(Arguments, ...)) then
                 local Info, Traceback, Arguments = GetCaller({...}) --// Because the stack trace gets removed from _Args
                 Thread = coroutine.running()
 
@@ -482,7 +490,7 @@ for Name, Method in next, Methods do
 
                 if self.ClassName:match("Function") then --// Events return nil so what's the point in yielding? just leads to retarded detections
                     task.spawn(function()
-                        local Success, Response = SortArguments(pcall(Original, self, unpack(Arguments)))
+                        local Success, Response = SortArguments(pcall(Original, self, ReturnArguments(Arguments, ...)))
 
                         --[[if not Success then
                             return coroutine.resume(Thread, unpack(Response))
@@ -506,7 +514,7 @@ for Name, Method in next, Methods do
             warn(e)
         end, ...)]]
 
-        return Original(self, unpack(Arguments)) --unpack(Response)
+        return Original(self, ReturnArguments(Arguments, ...)) --unpack(Response)
     end)
 
     Hooks[Func] = Original
@@ -523,7 +531,7 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
         if self.ClassName:match("Function") then --// Events return nil so what's the point in yielding? just leads to retarded detections
             task.spawn(function(...)
                 setnamecallmethod(Method)
-                local Success, Response = SortArguments(pcall(OldNamecall, self, unpack(Arguments)))
+                local Success, Response = SortArguments(pcall(OldNamecall, self, ReturnArguments(Arguments, ...)))
 
                 --[[if not Success then
                     return coroutine.resume(Thread, unpack(Response))
