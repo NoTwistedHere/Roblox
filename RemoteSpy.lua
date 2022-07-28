@@ -489,7 +489,7 @@ for Name, Method in next, Methods do
                 table.remove(Arguments, 1)
 
                 if self.ClassName:match("Function") then --// Events return nil so what's the point in yielding? just leads to retarded detections
-                    task.spawn(function()
+                    task.spawn(function(...)
                         local Success, Response = SortArguments(pcall(Original, self, ReturnArguments(Arguments, ...)))
 
                         --[[if not Success then
@@ -503,7 +503,7 @@ for Name, Method in next, Methods do
                         until coroutine.status(Thread) == "suspended"
             
                         coroutine.resume(Thread, unpack(Response))
-                    end)
+                    end, ...)
             
                     return coroutine.yield()
                 end
