@@ -107,7 +107,12 @@ local function GetPath(Object, Sub)
     local Path = GetName(Object.Name):reverse()
     local Parent = Object.Parent
     
-    if Parent == game then
+    if Object == game then
+        Path = ("game"):reverse()
+    elseif IsService(Object) then
+        Path ..= (":GetService(\"%s\")"):format(Object.ClassName):reverse()
+        Path ..= GetPath(Parent, true)
+    elseif Parent == game then
         Path = ("game"):reverse()
     elseif Parent and IsService(Parent) then
         Path ..= (":GetService(\"%s\")"):format(Parent.ClassName):reverse()

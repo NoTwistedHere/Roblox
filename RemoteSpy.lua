@@ -323,7 +323,10 @@ if GetCallerV2 then
         getrenv().task.spawn,
         getrenv().task.defer,
         getrenv().task.delay,
-        getrenv().spawn
+        getrenv().spawn,
+        getrenv().pcall, --// is traceable
+        --getrenv().delay, --// is traceable
+        getrenv().xpcall --// is traceable
     }
 
     local function GenerateGUID(Info, Traceback)
