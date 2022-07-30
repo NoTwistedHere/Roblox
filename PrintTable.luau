@@ -283,7 +283,7 @@ local _PrintTable; _PrintTable = YieldableFunc(function(Table, Options, Indents,
             Comment = CreateComment("Defined by caller", Options)
         end
 
-        return (Metatable and "setmetatable(%s, %s)%s" or "%s%s%s"):format(Tostring(Table), Metatable and _PrintTable(Metatable, Options, Indents, Checked) or Comment or "", Metatable and Comment or ""), Comment and true or false, Table
+        return (Metatable and "setmetatable(%s, %s)%s" or "%s%s%s"):format(Tostring(Table), Metatable and _PrintTable(Metatable, Options, Indents, Checked) or Comment or "", Metatable and Comment or ""), Comment and "DBC" or false, Table
     end
 
     local NewTable, Results, Thread = {}, {}, Threading.new()
@@ -326,8 +326,8 @@ local _PrintTable; _PrintTable = YieldableFunc(function(Table, Options, Indents,
 
                 local IsValid = (type(Value) == "table" or typeof(Value) == "userdata") and not Checked[Value]
                 local ParsedValue, IsComment, ReParse = _PrintTable(Value, Options, Indents + 1, Checked, NewRoot)
-                local Parsed = {ParseObject(ReParse or Value, true, true, Checked, NewRoot, Options)}
-                local Comment = (IsValid and Parsed[1]..(Parsed[2] and " " or "") or "") .. (Parsed[2] and Parsed[2] or "")
+                local Parsed = {ParseObject((IsComment == "DBC" or not ReParse) and Value or ReParse, true, true, Checked, NewRoot, Options)}
+                local Comment = ((IsComment == "DBC" or IsValid) and Parsed[1]..(Parsed[2] and " " or "") or "") .. (Parsed[2] and Parsed[2] or "")
 
                 Results[TIndex] = Format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot, Options), ParsedValue or Parsed[1], Count < TableCount and "," or "", #Comment > 0 and CreateComment(Comment or "", Options, IsComment))
                 Count += 1
