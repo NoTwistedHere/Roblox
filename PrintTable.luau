@@ -11,6 +11,10 @@ local ObjectTypes = {
     ["userdata"] = 4;
     ["table"] = 4;
     ["function"] = 5;
+    ["EnumItem"] = 6;
+    ["Enum"] = 7;
+    ["NumberSequenceKeypoint"] = 8;
+    ["NumberSequence"] = 9;
 }
 
 local function CountTable(Table)
@@ -174,7 +178,7 @@ local function Stringify(String, Options, Extra, Checked, Root)
     return ConvertCodepoints(AntiRep(Options, String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("%c", function(Char) return "\\"..string.byte(Char) end), Extra))
 end
 
-local function ParseObject(Object, DetailedInfo, TypeOf, Checked, Root, Options)
+local ParseObject; ParseObject = function(Object, DetailedInfo, TypeOf, Checked, Root, Options, Indents)
     local Type = typeof(Object)
     local ObjectType = ObjectTypes[Type]
     
@@ -188,6 +192,20 @@ local function ParseObject(Object, DetailedInfo, TypeOf, Checked, Root, Options)
         elseif ObjectType == 5 then
             local Info = getinfo(Object)
             return ("%s"):format(tostring(Object)), (" source: %s, what: %s, name: %s (currentline: %s, numparams: %s, nups: %s, is_vararg: %s)"):format(Stringify(Info.source, Options), Info.what, Stringify(Info.name, Options), Info.currentline, Info.numparams, Info.nups, Info.is_vararg)
+        elseif ObjectType == 6 then
+            return tostring(Object.Name)
+        elseif ObjectType == 7 then
+            return ("Enum."):format(tostring(Object))
+        elseif ObjectType == 8 then
+            return ("NumberSequenceKeypoint.new(%d, %d)"):format(Object.Time, Object.Value)
+        elseif ObjectType == 9 then
+            local Keypoints = "{\n"
+
+            for i, v in next, Object.Keypoints do
+                Keypoints ..= ("    "):rep(Indents + 1) .. ParseObject(v, DetailedInfo, false, Checked, Root, Options) .. ("%s\n"):format(i == #Object.Keypoints and "" or ",")
+            end
+
+            return ("NumberSequence.new(%s)"):format(Keypoints .. ("    "):rep(Indents) .. "}")
         else
             return Tostring(Object)
         end
@@ -319,17 +337,17 @@ local _PrintTable; _PrintTable = YieldableFunc(function(Table, Options, Indents,
                 end
 
                 if AlreadyLogged then
-                    Results[TIndex] = Format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot, Options), Tostring(Value), Count < TableCount and "," or "", Checked[Value] and "" or CreateComment("Duplicate of "..Tostring(AlreadyLogged), Options))
+                    Results[TIndex] = Format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot, Options, Indents), Tostring(Value), Count < TableCount and "," or "", Checked[Value] and "" or CreateComment("Duplicate of "..Tostring(AlreadyLogged), Options))
                     Count += 1
                     continue;
                 end
 
                 local IsValid = (type(Value) == "table" or typeof(Value) == "userdata") and not Checked[Value]
                 local ParsedValue, IsComment, ReParse = _PrintTable(Value, Options, Indents + 1, Checked, NewRoot)
-                local Parsed = {ParseObject((IsComment == "DBC" or not ReParse) and Value or ReParse, true, true, Checked, NewRoot, Options)}
+                local Parsed = {ParseObject((IsComment == "DBC" or not ReParse) and Value or ReParse, true, true, Checked, NewRoot, Options, Indents)}
                 local Comment = ((IsComment == "DBC" or IsValid) and Parsed[1]..(Parsed[2] and " " or "") or "") .. (Parsed[2] and Parsed[2] or "")
 
-                Results[TIndex] = Format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot, Options), ParsedValue or Parsed[1], Count < TableCount and "," or "", #Comment > 0 and CreateComment(Comment or "", Options, IsComment))
+                Results[TIndex] = Format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot, Options, Indents), ParsedValue or Parsed[1], Count < TableCount and "," or "", #Comment > 0 and CreateComment(Comment or "", Options, IsComment))
                 Count += 1
             end
         end)
@@ -368,7 +386,9 @@ getgenv().PrintTable = YieldableFunc(function(Table, Options)
     assert((Type == "table" or Type == "userdata"), "PrintTable Error: Invalid Argument #1 (table or userdata expected)")
     assert((type(Options) == "table" or not Options), "PrintTable Error: Invalid Argument #2 (table expected)")
 
-    local Success, Response = pcall(_PrintTable, Table, Options or {})
+    Options = Options or {}
+
+    local Success, Response = pcall(_PrintTable, Table, Options, Options.Indents)
 
     return (Success and Response) or ("PrintTable Error: \"%s\""):format(Response)
 end)
