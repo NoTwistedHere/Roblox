@@ -163,6 +163,10 @@ end
 
 local function GetName(Name)
     if tonumber(Name:sub(1, 1)) or Name:match("([0-9a-zA-Z]*)") ~= Name then
+        if Name:match("\0") then
+            return (":FindFirstChild(\"%s\")"):format(Convert(Name))
+        end
+
         return ("[\"%s\"]"):format(Convert(Name))
     end
     
@@ -173,7 +177,12 @@ local function GetPath(Object, Sub)
     local Path = GetName(Object.Name):reverse()
     local Parent = Object.Parent
     
-    if Parent == game then
+    if not Sub and Object == game then
+        Path = ("game"):reverse()
+    elseif not Sub and IsService(Object) then
+        Path ..= (":GetService(\"%s\")"):format(Object.ClassName):reverse()
+        Path ..= GetPath(Parent, true)
+    elseif Parent == game then
         Path = ("game"):reverse()
     elseif Parent and IsService(Parent) then
         Path ..= (":GetService(\"%s\")"):format(Parent.ClassName):reverse()
@@ -205,7 +214,7 @@ local function Log(Arguments, NewThread)
         local GeneratedCode = GenerateCode and GenerateC(Arguments.self, Arguments.RawMethod or Arguments.Method, Arguments.Arguments) or "Disabled"
 
         for i, v in next, Arguments do
-            if type(v) == "string" then
+            if type(v) == "string" and i ~= "What" then
                 Arguments[i] = Stringify(v)
             elseif type(v) == "table" then
                 if i == "Traceback" then

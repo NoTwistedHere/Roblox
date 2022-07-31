@@ -162,6 +162,10 @@ end
 
 local function GetName(Name)
     if tonumber(Name:sub(1, 1)) or Name:match("([0-9a-zA-Z]*)") ~= Name then
+        if Name:match("\0") then
+            return (":FindFirstChild(\"%s\")"):format(Convert(Name))
+        end
+
         return ("[\"%s\"]"):format(Convert(Name))
     end
     
