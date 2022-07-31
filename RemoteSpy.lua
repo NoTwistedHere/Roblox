@@ -144,9 +144,26 @@ local function IsService(Object)
     return Success and Response
 end
 
+local function Convert(OriginalString)
+    local String = ""
+    local OriginalString = OriginalString:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("%c", function(Char) return "\\"..string.byte(Char) end)
+
+    for i = 1, #OriginalString do
+        local Byte = string.byte(OriginalString, i, i)
+        if Byte <= 126 and Byte >= 33 then
+            String ..= string.char(Byte)
+            continue;
+        end
+
+        String ..= "\\" .. Byte
+    end
+
+    return String
+end
+
 local function GetName(Name)
     if tonumber(Name:sub(1, 1)) or Name:match("([0-9a-zA-Z]*)") ~= Name then
-        return ("[\"%s\"]"):format(Name)
+        return ("[\"%s\"]"):format(Convert(Name))
     end
     
     return (".%s"):format(Name)

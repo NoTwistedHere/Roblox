@@ -99,41 +99,6 @@ local function IsService(Object)
     return Success and Response
 end
 
-local function GetName(Name)
-    if tonumber(Name:sub(1, 1)) or Name:match("([0-9a-zA-Z]*)") ~= Name then
-        return ("[\"%s\"]"):format(Name)
-    end
-    
-    return (".%s"):format(Name)
-end
-
-local function GetPath(Object, Sub)
-    local Path = GetName(Object.Name):reverse()
-    local Parent = Object.Parent
-    
-    if not Sub and Object == game then
-        Path = ("game"):reverse()
-    elseif not Sub and IsService(Object) then
-        Path ..= (":GetService(\"%s\")"):format(Object.ClassName):reverse()
-        Path ..= GetPath(Parent, true)
-    elseif Parent == game then
-        Path = ("game"):reverse()
-    elseif Parent and IsService(Parent) then
-        Path ..= (":GetService(\"%s\")"):format(Parent.ClassName):reverse()
-        Path ..= GetPath(Parent, true)
-    elseif Parent then
-        Path ..= GetPath(Parent, true)
-    elseif Object ~= game then
-        Path ..= ("nil"):reverse()
-    end
-    
-    if Sub then
-        return Path
-    end
-    
-    return Path:reverse()
-end
-
 local function Tostring(Object)
     local Metatable = getrawmetatable(Object)
 
@@ -176,6 +141,58 @@ local function Stringify(String, Options, Extra, Checked, Root)
     end
     
     return ConvertCodepoints(AntiRep(Options, String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("%c", function(Char) return "\\"..string.byte(Char) end), Extra))
+end
+
+local function Convert(OriginalString)
+    local String = ""
+    local OriginalString = OriginalString:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("%c", function(Char) return "\\"..string.byte(Char) end)
+
+    for i = 1, #OriginalString do
+        local Byte = string.byte(OriginalString, i, i)
+        if Byte <= 126 and Byte >= 33 then
+            String ..= string.char(Byte)
+            continue;
+        end
+
+        String ..= "\\" .. Byte
+    end
+
+    return String
+end
+
+local function GetName(Name)
+    if tonumber(Name:sub(1, 1)) or Name:match("([0-9a-zA-Z]*)") ~= Name then
+        return ("[\"%s\"]"):format(Convert(Name))
+    end
+    
+    return (".%s"):format(Name)
+end
+
+local function GetPath(Object, Sub)
+    local Path = GetName(Object.Name):reverse()
+    local Parent = Object.Parent
+    
+    if not Sub and Object == game then
+        Path = ("game"):reverse()
+    elseif not Sub and IsService(Object) then
+        Path ..= (":GetService(\"%s\")"):format(Object.ClassName):reverse()
+        Path ..= GetPath(Parent, true)
+    elseif Parent == game then
+        Path = ("game"):reverse()
+    elseif Parent and IsService(Parent) then
+        Path ..= (":GetService(\"%s\")"):format(Parent.ClassName):reverse()
+        Path ..= GetPath(Parent, true)
+    elseif Parent then
+        Path ..= GetPath(Parent, true)
+    elseif Object ~= game then
+        Path ..= ("nil"):reverse()
+    end
+    
+    if Sub then
+        return Path
+    end
+    
+    return Path:reverse()
 end
 
 local ParseObject; ParseObject = function(Object, DetailedInfo, TypeOf, Checked, Root, Options, Indents)
