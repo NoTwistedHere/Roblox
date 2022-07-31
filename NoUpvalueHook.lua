@@ -1,4 +1,7 @@
---// I'm tired of 'too many upvalues' so I decided to create a little module instead of doing it manually
+--[[
+    Report any bugs, issues and detections to me if you don't mind (NoTwistedHere#6703)
+    I'm tired of 'too many upvalues' so I decided to create a little module instead of doing it manually
+]]
 
 return function(src, Upvalues) --// See the example below
     local RUpvalues = {}

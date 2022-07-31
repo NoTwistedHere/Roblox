@@ -1,3 +1,7 @@
+--[[
+    Report any bugs, issues and detections to me if you don't mind (NoTwistedHere#6703)
+]]
+
 if not FormatTable then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/FormatTable.lua"))()
 end
