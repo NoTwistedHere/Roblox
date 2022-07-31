@@ -16,15 +16,15 @@ DumpFunctions()
 ```
 Writes to `Garbage Logs/ {Name} [{PlaceId}]/`
 
-# PrintTable (can be placed in autoexec)
+# FormatTable (can be placed in autoexec)
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/PrintTable.luau"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/FormatTable.lua"))()
 ```
 ## <b>Example Usage:</b>
 ```lua
-PrintTable({a, "b", 1, game:GetService("Players"), pcall})
+FormatTable({a, "b", 1, game:GetService("Players"), pcall})
 
-PrintTable({ workspace, 20, { pcall, 0X20 } }, {
+FormatTable({ workspace, 20, { pcall, 0X20 } }, {
     OneLine = true;
     IgnoreNumberIndex = true;
     NoIndentation = false;
@@ -33,9 +33,9 @@ PrintTable({ workspace, 20, { pcall, 0X20 } }, {
     NoAntiRep = false;
 })
 
-PrintArguments(a, "b", 1, game:GetService("Players"), pcall)
+FormatArguments(a, "b", 1, game:GetService("Players"), pcall)
 
-local Result = PrintTable({ 1, "b", game:GetService("Players").LocalPlayer}, {
+local Result = FormatTable({ 1, "b", game:GetService("Players").LocalPlayer}, {
     OneLine = false;
     IgnoreNumberIndex = false;
     NoIndentation = false;
@@ -48,7 +48,7 @@ local Proxy, Key = newproxy(true), game:GetService("HttpService"):GenerateGUID(f
 setrawmetatable(Proxy, {
     [Key] = "Hello there"
 })
-PrintTable({ workspace, 20, Proxy }, {
+FormatTable({ workspace, 20, Proxy }, {
     OneLine = false;
     IgnoreNumberIndex = false;
     NoIndentation = false;

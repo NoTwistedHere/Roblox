@@ -175,7 +175,7 @@ local function GetPath(Object, Sub)
 end
 
 local function GenerateC(self, Method, Arguments)
-    local R = PrintTable(Arguments, {NoIndentation = true, OneLine = true, NoComments = true, IgnoreNumberIndex = true, GenerateScript = true})
+    local R = FormatTable(Arguments, {NoIndentation = true, OneLine = true, NoComments = true, IgnoreNumberIndex = true, GenerateScript = true})
     local Result = R[1]
 
     Result ..= ("%s:%s(%s)"):format(GetPath(self), Method, R[2])
@@ -192,11 +192,11 @@ local function Log(Arguments, NewThread)
                 Arguments[i] = Stringify(v)
             elseif type(v) == "table" then
                 if i == "Traceback" then
-                    Arguments[i] = PrintTable(v, {NoComments = true, IgnoreNumberIndex = true})
+                    Arguments[i] = FormatTable(v, {NoComments = true, IgnoreNumberIndex = true})
                     continue;
                 end
 
-                Arguments[i] = PrintTable(v)
+                Arguments[i] = FormatTable(v)
             end
         end
 
@@ -251,6 +251,8 @@ end
 local function V2CheckArguments(Arguments)
     if type(Arguments) ~= "table" then
         return false
+    elseif not GetCallerV2 then
+        return {false, {}, Arguments}
     end
 
     local Traceback, Info = {};
@@ -325,7 +327,6 @@ if GetCallerV2 then
         getrenv().task.delay,
         getrenv().spawn,
         getrenv().pcall, --// is traceable
-        --getrenv().delay, --// is traceable
         getrenv().xpcall --// is traceable
     }
 
@@ -470,9 +471,9 @@ if GetCallerV2 then
 end
 
 local function ReturnArguments(Arguments, ...)
-    if GetCallerV2 and #Arguments <= 7995 then
+    --[[if GetCallerV2 and #Arguments <= 7995 then
         return unpack(Arguments)
-    end
+    end]]
 
     return ...
 end
@@ -480,87 +481,90 @@ end
 for Name, Method in next, Methods do
     local Func = Instance.new(Name)[Method]
     local Original; Original = hookfunction(Func, function(...)
-        local _Args = {...}
-        local Arguments = GetCallerV2 and V2CheckArguments(_Args)[3] or _Args
-        local self = table.remove(Arguments, 1)
+        local self, OArguments = SortArguments(...)
+        OArguments = V2CheckArguments(OArguments)[3]
 
-        if RemoteSpyEnabled and #Arguments <= 7995 and ArgGuard(self, ReturnArguments(Arguments, ...)) and Enabled[self.ClassName] and not Ignore(self, ReturnArguments(Arguments, ...)) then
-            local Info, Traceback, Arguments = GetCaller({...}) --// Because the stack trace gets removed from _Args
-            Thread = coroutine.running()
+        local function FuckYou(...)
+            if RemoteSpyEnabled and #OArguments <= 7995 and ArgGuard(self, ...) and Enabled[self.ClassName] and not Ignore(self, ...) then
+                local Info, Traceback, Arguments = GetCaller({...}) --// Because the stack trace gets removed from _Args
+                local Thread = coroutine.running()
 
-            table.remove(Arguments, 1)
+                table.remove(Arguments, 1)
 
-            if self.ClassName:match("Function") then --// Events return nil so what's the point in yielding? just leads to retarded detections
-                task.spawn(function(...)
-                    local Success, Response = SortArguments(pcall(Original, self, ReturnArguments(Arguments, ...)))
+                if self.ClassName:match("Function") then --// Events return nil so what's the point in yielding? just leads to retarded detections
+                    task.spawn(function(...)
+                        local Success, Response = SortArguments(pcall(Original, self, ...))
 
-                    --[[if not Success then
-                        return coroutine.resume(Thread, unpack(Response))
-                    end]]
-            
-                    Log({self = self, What = GetPath(self), RawMethod = Method, Method = Method .. " (Raw)", Script = Info.short_src, Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
+                        --[[if not Success then
+                            return coroutine.resume(Thread, unpack(Response))
+                        end]]
+                
+                        Log({self = self, What = GetPath(self), RawMethod = Method, Method = Method .. " (Raw)", Script = Info.short_src, Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
 
-                    repeat
-                        task.wait()
-                    until coroutine.status(Thread) == "suspended"
-            
-                    coroutine.resume(Thread, unpack(Response))
-                end, ...)
-            
-                return coroutine.yield()
+                        repeat
+                            task.wait()
+                        until coroutine.status(Thread) == "suspended"
+                
+                        coroutine.resume(Thread, unpack(Response))
+                    end, ...)
+                
+                    return coroutine.yield()
+                end
+
+                Log({self = self, What = GetPath(self), RawMethod = Method, Method = Method .. " (Raw)", Script = Info.short_src, Arguments = Arguments, Info = Info, Traceback = Traceback}, true)
             end
-
-            Log({self = self, What = GetPath(self), RawMethod = Method, Method = Method .. " (Raw)", Script = Info.short_src, Arguments = Arguments, Info = Info, Traceback = Traceback}, true)
         end
-
-        return Original(self, ReturnArguments(Arguments, ...)) --unpack(Response)
+        
+        FuckYou(unpack(OArguments))
+        return Original(self, unpack(OArguments)) --unpack(Response)
     end)
 
     Hooks[Func] = Original
 end
 
 local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...)
-    local self, Arguments = SortArguments(...)
+    local self, OArguments = SortArguments(...)
     local Method = getnamecallmethod()
+    OArguments = V2CheckArguments(OArguments)[3]
     
-    if RemoteSpyEnabled and ArgGuard(...) and Enabled[self.ClassName] and IsValidMethod(self.ClassName, Method) and not Ignore(...) then
-        local Thread = coroutine.running()
-        local Info, Traceback, Arguments = GetCaller(Arguments)
+    local function FuckYou(...)
+        if RemoteSpyEnabled and #OArguments <= 7995 and ArgGuard(self, ...) and Enabled[self.ClassName] and IsValidMethod(self.ClassName, Method) and not Ignore(...) then
+            local Info, Traceback, Arguments = GetCaller({...})
+            local Thread = coroutine.running()
 
-        if #Arguments > 7995 then
-            return OldNamecall(ReturnArguments(Arguments, ...)) --// Thank you Lua
+            if self.ClassName:match("Function") then --// Events return nil so what's the point in yielding? just leads to retarded detections
+                task.spawn(function(...)
+                    setnamecallmethod(Method)
+                    local Success, Response = SortArguments(pcall(OldNamecall, self, ...))
+
+                    --[[if not Success then
+                        return coroutine.resume(Thread, unpack(Response))
+                    end]]
+
+                    Log({self = self, What = GetPath(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
+
+                    repeat
+                        task.wait()
+                    until coroutine.status(Thread) == "suspended"
+
+                    coroutine.resume(Thread, unpack(Response))
+                end, ...)
+
+                return coroutine.yield()
+            end
+
+            Log({self = self, What = GetPath(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Traceback = Traceback}, true)
+            setnamecallmethod(Method)
         end
-
-        if self.ClassName:match("Function") then --// Events return nil so what's the point in yielding? just leads to retarded detections
-            task.spawn(function(...)
-                setnamecallmethod(Method)
-                local Success, Response = SortArguments(pcall(OldNamecall, self, ReturnArguments(Arguments, ...)))
-
-                --[[if not Success then
-                    return coroutine.resume(Thread, unpack(Response))
-                end]]
-
-                Log({self = self, What = GetPath(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
-
-                repeat
-                    task.wait()
-                until coroutine.status(Thread) == "suspended"
-
-                coroutine.resume(Thread, unpack(Response))
-            end, ...)
-
-            return coroutine.yield()
-        end
-
-        Log({self = self, What = GetPath(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Traceback = Traceback}, true)
-        setnamecallmethod(Method)
     end
+    
+    FuckYou(unpack(OArguments))
 
-    if typeof(self) == "Instance" and IsValidMethod(self.ClassName, Method) then
+    --[[if typeof(self) == "Instance" and IsValidMethod(self.ClassName, Method) then
         return OldNamecall(ReturnArguments(Arguments, ...))
-    end
+    end]]
 
-    return OldNamecall(...) --unpack(Response)
+    return OldNamecall(self, unpack(OArguments)) --unpack(Response)
 end)
 
 local function SafeCall(Function, ...)
@@ -650,7 +654,7 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...
             return unpack(Response)
         end)]==]
 
-        NUB([=[local Success, Response = <<SafeCall>>(<<Function>>, ...)
+        local Old; Old = hookfunction(Function, NUB([=[local Success, Response = <<pcall>>(<<Old>>, ...)
 
         if <<getgenv>>().RemoteSpyEnabled and <<getgenv>>().Enabled["OnClientInvoke"] then
             Log({self = <<self>>, What = <<Name>>, Method = "InvokeClient", Script = <<Info>>.short_src, Arguments = {...}, FunctionInfo = <<FunctionInfo>>, Info = <<Info>>, Response = not Success and "Script Error: "..Response or Response, Traceback = <<Traceback>>})
@@ -660,7 +664,7 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...
             return;
         end
 
-        return unpack(Response)]=], {SafeCall = SafeCall, Function = Function, getgenv = getgenv, Name = Name, self = self, Info = Info, FunctionInfo = FunctionInfo, Traceback = Traceback})
+        return unpack(Response)]=], {Old = Old, pcall = pcall, getgenv = getgenv, Name = Name, self = self, Info = Info, FunctionInfo = FunctionInfo, Traceback = Traceback}))
     end
 
     return OldNewIndex(...)

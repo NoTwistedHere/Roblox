@@ -208,7 +208,7 @@ getgenv().DumpScript = function(Source) --// Outdated, cba to update tbh
     table.sort(Functions, function(a, b) return a[2].currentline < b[2].currentline end)
 
     for i, Data in next, Functions do
-        appendfile(File, PrintTable(Write(Data[1]), {MetatableKey = Key}))
+        appendfile(File, FormatTable(Write(Data[1]), {MetatableKey = Key}))
 
         CPB(i, #Functions)
     end
@@ -271,7 +271,7 @@ getgenv().DumpFunctions = function()
                             continue;
                         end
 
-                        FinalData[Data[2].currentline] = {Data[2].currentline, PrintTable(Write(Data[1]), {MetatableKey = Key}).."\n"}
+                        FinalData[Data[2].currentline] = {Data[2].currentline, FormatTable(Write(Data[1]), {MetatableKey = Key}).."\n"}
 
                         for i, v in next, FinalData do
                             if FDCount == 0 then
