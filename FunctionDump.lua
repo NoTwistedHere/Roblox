@@ -1,5 +1,3 @@
-script.Name = "FunctionDump.lua"
-
 if not FormatTable then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/FormatTable.lua"))()
 end

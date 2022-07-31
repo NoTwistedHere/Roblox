@@ -1,5 +1,3 @@
-script.Name = "Signalling.lua"
-
 local Signalling = {} --// Is that right?
 
 function Signalling:Fire(...)

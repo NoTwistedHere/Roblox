@@ -1,5 +1,3 @@
-script.Name = "FormatTable.lua"
-
 local Threading = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/Threading.lua"))()
 local HttpService = game:GetService("HttpService")
 local ObjectTypes = {
