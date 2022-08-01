@@ -1,5 +1,6 @@
 # Roblox Utils
 Enjoy the pain I go through so you don't have to worry about being caught cheating (hopefully)
+Report any bugs, issues, detections or ideas to me on Discord (NoTwistedHere#6703) or GitHub
 
 # Credits
 Thanks to these amazing people for helping with detections
@@ -9,4 +10,5 @@ Iris#0410
 Waiyu#5437
 ZWRh3#1279
 乂几乂#1795
+Gegecito (https://github.com/Gegecito)
 ```
