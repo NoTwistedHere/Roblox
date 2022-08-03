@@ -685,6 +685,7 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...
         end
 
         if not Success then
+            error(Response, 2)
             return;
         end
 
