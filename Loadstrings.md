@@ -58,6 +58,16 @@ FormatTable({ workspace, 20, Proxy }, {
 })
 ```
 
+# AssetRipper (can be placed in autoexec)
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/AssetRipper.lua"))()
+```
+## <b>Example Usage:</b>
+```lua
+DownloadMeshes(game, "Jailbreak-Asset-Dump/") --// file format: {AssetName} {(Index)}.obj
+DownloadTextures(game, "Jailbreak-Asset-Dump/") --//file format: {AssetName} {(Index)}.png
+```
+
 # RemoteSpy (can be placed in autoexec)
 ```lua
 loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/RemoteSpy.lua"))() --// spying on :InvokeClient can only be done if executed before the game loads
