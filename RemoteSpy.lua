@@ -249,12 +249,12 @@ local function ArgGuard(self, ...)
 
     local Arguments = {...}
 
-    if self.ClassName:match("Function") and #Arguments > 7995 then
+    --[[if self.ClassName:match("Function") and #Arguments > 7995 then
         return false
-    end
+    end]]
 
-    for i, v in next, {...} do
-        if type(v) == "table" and rawget(v, v) then
+    for i, v in next, Arguments do
+        if type(v) == "table" and table.find(Arguments, v) then
             return false
         end
     end
