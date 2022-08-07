@@ -513,9 +513,10 @@ for Name, Method in next, Methods do
                 local Info, Traceback, Arguments = GetCaller({...}) --// Because the stack trace gets removed from _Args
                 local Thread = coroutine.running()
 
-                table.remove(Arguments, 1)
-
                 if self.ClassName:match("Function") then --// Events return nil so what's the point in yielding? just leads to retarded detections
+                    local BindableEvent = Instance.new("BindableEvent")
+                    local Response1 = {}
+
                     task.spawn(function(...)
                         local Success, Response = SortArguments(pcall(Original, self, ...))
 
@@ -523,23 +524,26 @@ for Name, Method in next, Methods do
                             return coroutine.resume(Thread, unpack(Response))
                         end]]
                 
-                        Log({self = self, What = GetPath(self), RawMethod = Method, Method = Method .. " (Raw)", Script = Info.short_src, Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
+                        Log({self = self, What = GetPath(self), RawMethod = Method, Method = Method .. " (Raw)", Script = Info.short_src, Arguments = OArguments, Info = Info, Response = Response, Traceback = Traceback})
 
-                        repeat
-                            task.wait()
-                        until coroutine.status(Thread) == "suspended"
-                
-                        coroutine.resume(Thread, unpack(Response))
+                        Response1 = Response
+                        BindableEvent:Fire(unpack(Response))
+                        BindableEvent:Destroy()
                     end, ...)
                 
-                    return coroutine.yield()
+                    return true, Response1 and unpack(Response1) or BindableEvent.Event:Wait()
                 end
 
-                Log({self = self, What = GetPath(self), RawMethod = Method, Method = Method .. " (Raw)", Script = Info.short_src, Arguments = Arguments, Info = Info, Traceback = Traceback}, true)
+                Log({self = self, What = GetPath(self), RawMethod = Method, Method = Method .. " (Raw)", Script = Info.short_src, Arguments = OArguments, Info = Info, Traceback = Traceback}, true)
             end
         end
         
-        FuckYou(unpack(OArguments))
+        local is, r = FuckYou(unpack(OArguments))
+
+        if is then
+            return r
+        end
+
         return Original(self, unpack(OArguments)) --unpack(Response)
     end)
 
@@ -557,6 +561,9 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
             local Thread = coroutine.running()
 
             if self.ClassName:match("Function") then --// Events return nil so what's the point in yielding? just leads to retarded detections
+                local BindableEvent = Instance.new("BindableEvent")
+                local Response1 = {}
+
                 task.spawn(function(...)
                     setnamecallmethod(Method)
                     local Success, Response = SortArguments(pcall(OldNamecall, self, ...))
@@ -565,24 +572,26 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
                         return coroutine.resume(Thread, unpack(Response))
                     end]]
 
-                    Log({self = self, What = GetPath(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Response = Response, Traceback = Traceback})
+                    Log({self = self, What = GetPath(self), Method = Method, Script = Info.short_src, Arguments = OArguments, Info = Info, Response = Response, Traceback = Traceback})
 
-                    repeat
-                        task.wait()
-                    until coroutine.status(Thread) == "suspended"
-
-                    coroutine.resume(Thread, unpack(Response))
+                    Response1 = Response
+                    BindableEvent:Fire(unpack(Response))
+                    BindableEvent:Destroy()
                 end, ...)
 
-                return coroutine.yield()
+                return true, Response1 and unpack(Response1) or BindableEvent.Event:Wait()
             end
 
-            Log({self = self, What = GetPath(self), Method = Method, Script = Info.short_src, Arguments = Arguments, Info = Info, Traceback = Traceback}, true)
+            Log({self = self, What = GetPath(self), Method = Method, Script = Info.short_src, Arguments = OArguments, Info = Info, Traceback = Traceback}, true)
             setnamecallmethod(Method)
         end
     end
     
-    FuckYou(unpack(OArguments))
+    local is, r = FuckYou(unpack(OArguments))
+
+    if is then
+        return r
+    end
 
     --[[if typeof(self) == "Instance" and IsValidMethod(self.ClassName, Method) then
         return OldNamecall(ReturnArguments(Arguments, ...))
