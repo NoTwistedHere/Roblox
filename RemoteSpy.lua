@@ -11,7 +11,7 @@ getgenv().WriteToFile = WriteToFile or false
 getgenv().RobloxConsole = RobloxConsole or false
 getgenv().GetCallerV2 = GetCallerV2 or false --// BETA - You are more vulnerable to detections!
 getgenv().RemoteSpyEnabled = RemoteSpyEnabled or true
-getgenv().GenerateCode = GenerateCode or false
+getgenv().GenerateCode = GenerateCode or true
 getgenv().Enabled = Enabled or {
     BindableEvent = false;
     BindableFunction = false;
@@ -199,40 +199,51 @@ local function GetPath(Object, Sub)
 end
 
 local function GenerateC(self, Method, Arguments)
-    local R = FormatTable(Arguments, {NoIndentation = true, OneLine = true, NoComments = true, IgnoreNumberIndex = true, GenerateScript = true})
-    local Result = R[1]
+    warn(self, Method, Arguments)
 
-    Result ..= ("%s:%s(%s)"):format(GetPath(self), Method, R[2])
+    local R = FormatTable(Arguments or {}, {NoIndentation = true, OneLine = true, NoComments = true, IgnoreNumberIndex = true, GenerateScript = true})
+
+    if type(R) == "string" then
+        return R
+    end
+
+    local Result = tostring(R[1])
+
+    Result ..= tostring(self) .. ":" .. tostring(Method) .. "(" .. tostring(R[2]) .. ")" --// I can't be bothered to fix shitty names and stuff
     
     return Result
 end
 
 local function Log(Arguments, NewThread)
     local function Main()
-        local GeneratedCode = GenerateCode and GenerateC(Arguments.self, Arguments.RawMethod or Arguments.Method, Arguments.Arguments) or "Disabled"
+        xpcall(function()
+            local GeneratedCode = GenerateCode and Arguments.Info and GenerateC(Arguments.What, Arguments.RawMethod or Arguments.Method, Arguments.Arguments) or "Disabled"
 
-        for i, v in next, Arguments do
-            if type(v) == "string" and i ~= "What" then
-                Arguments[i] = Stringify(v)
-            elseif type(v) == "table" then
-                if i == "Traceback" then
-                    Arguments[i] = FormatTable(v, {NoComments = true, IgnoreNumberIndex = true})
-                    continue;
+            for i, v in next, Arguments do
+                if type(v) == "string" and i ~= "What" then
+                    Arguments[i] = Stringify(v)
+                elseif type(v) == "table" then
+                    if i == "Traceback" then
+                        Arguments[i] = FormatTable(v, {NoComments = true, IgnoreNumberIndex = true})
+                        continue;
+                    end
+
+                    Arguments[i] = FormatTable(v)
                 end
-
-                Arguments[i] = FormatTable(v)
             end
-        end
 
-        if Arguments.FunctionInfo then
-            return Save(("What: %s\nMethod: %s\nTo Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s\nFunctionInfo: %s\nTraceback: %s\nGenerated Code:\n%s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Timestamp(), Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.FunctionInfo, Arguments.Traceback, GeneratedCode))
-        elseif Arguments.Response then
-            return Save(("What: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s\nTraceback: %s\nGenerated Code:\n%s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Timestamp(), Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.Traceback, GeneratedCode))
-        elseif not Arguments.Info then
-            return Save(("What: %s\nMethod: %s\nTimestamp: %s\nArguments: %s\nGenerated Code:\n%s\n"):format(Arguments.What, Arguments.Method, Timestamp(), Arguments.Arguments, GeneratedCode))
-        end
+            if Arguments.FunctionInfo then
+                return Save(("What: %s\nMethod: %s\nTo Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s\nFunctionInfo: %s\nTraceback: %s\nGenerated Code:\n%s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Timestamp(), Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.FunctionInfo, Arguments.Traceback, GeneratedCode))
+            elseif Arguments.Response then
+                return Save(("What: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nReturn: %s\nInfo: %s\nTraceback: %s\nGenerated Code:\n%s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Timestamp(), Arguments.Arguments, Arguments.Response, Arguments.Info, Arguments.Traceback, GeneratedCode))
+            elseif not Arguments.Info then
+                return Save(("What: %s\nMethod: %s\nTimestamp: %s\nArguments: %s\n"):format(Arguments.What, Arguments.Method, Timestamp(), Arguments.Arguments))
+            end
 
-        Save(("What: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s\nTraceback: %s\nGenerated Code:\n%s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Timestamp(), Arguments.Arguments, Arguments.Info, Arguments.Traceback, GeneratedCode))
+            Save(("What: %s\nMethod: %s\nFrom Script: %s\nTimestamp: %s\nArguments: %s\nInfo: %s\nTraceback: %s\nGenerated Code:\n%s\n"):format(Arguments.What, Arguments.Method, Arguments.Script, Timestamp(), Arguments.Arguments, Arguments.Info, Arguments.Traceback, GeneratedCode))
+        end, function(e)
+            Save(("ERROR: %s\nTraceback: %s"):format(e, debug.traceback()))
+        end)
     end
 
     if NewThread then --// There's a reason as to why I try and avoid task.spawn, but I'm not trying to release semi-bypasses
@@ -254,7 +265,7 @@ local function ArgGuard(self, ...)
     end]]
 
     for i, v in next, Arguments do
-        if type(v) == "table" and table.find(Arguments, v) then
+        if type(v) == "table" and table.find(v, v) then
             return false
         end
     end
@@ -509,6 +520,9 @@ for Name, Method in next, Methods do
         OArguments = V2CheckArguments(OArguments)[3]
 
         local function FuckYou(...)
+            local Old = getthreadidentity()
+            setthreadidentity(7)
+
             if RemoteSpyEnabled and #OArguments <= 7995 and ArgGuard(self, ...) and Enabled[self.ClassName] and not Ignore(self, ...) then
                 local Info, Traceback, Arguments = GetCaller({...}) --// Because the stack trace gets removed from _Args
                 local Thread = coroutine.running()
@@ -529,19 +543,23 @@ for Name, Method in next, Methods do
                         Response1 = Response
                         BindableEvent:Fire(unpack(Response))
                         BindableEvent:Destroy()
-                    end, ...)
+                    end, unpack(Arguments))
                 
                     return true, Response1 and unpack(Response1) or BindableEvent.Event:Wait()
                 end
 
                 Log({self = self, What = GetPath(self), RawMethod = Method, Method = Method .. " (Raw)", Script = Info.short_src, Arguments = OArguments, Info = Info, Traceback = Traceback}, true)
             end
+
+            setthreadidentity(Old)
         end
         
-        local is, r = FuckYou(unpack(OArguments))
+        local Success, IsResponse, Response = pcall(FuckYou, unpack(OArguments))
 
-        if is then
-            return r
+        if Success and IsResponse then
+            return Response
+        elseif not Success then
+            Save(("ERROR: %s\nTraceback: %s"):format(IsResponse, debug.traceback()))
         end
 
         return Original(self, unpack(OArguments)) --unpack(Response)
@@ -556,6 +574,9 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
     OArguments = V2CheckArguments(OArguments)[3]
     
     local function FuckYou(...)
+        local Old = getthreadidentity()
+        setthreadidentity(7)
+
         if RemoteSpyEnabled and #OArguments <= 7995 and ArgGuard(self, ...) and Enabled[self.ClassName] and IsValidMethod(self.ClassName, Method) and not Ignore(...) then
             local Info, Traceback, Arguments = GetCaller({...})
             local Thread = coroutine.running()
@@ -585,12 +606,16 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
             Log({self = self, What = GetPath(self), Method = Method, Script = Info.short_src, Arguments = OArguments, Info = Info, Traceback = Traceback}, true)
             setnamecallmethod(Method)
         end
+
+        setthreadidentity(Old)
     end
     
-    local is, r = FuckYou(unpack(OArguments))
+    local Success, IsResponse, Response = pcall(FuckYou, unpack(OArguments))
 
-    if is then
-        return r
+    if Success and IsResponse then
+        return Response
+    elseif not Success then
+        Save(("ERROR: %s\nTraceback: %s"):format(IsResponse, debug.traceback()))
     end
 
     --[[if typeof(self) == "Instance" and IsValidMethod(self.ClassName, Method) then
@@ -599,18 +624,6 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
 
     return OldNamecall(self, unpack(OArguments)) --unpack(Response)
 end)
-
-local function SafeCall(Function, ...)
-    local Old, SetFEnv, OldEnv = getthreadidentity(), setfenv, getfenv()
-
-    setthreadidentity(2)
-    SetFEnv(0, getfenv(Function))
-    local Success, Response = SortArguments(pcall(Function, ...)) --// you're loss ;)
-    SetFEnv(0, OldEnv)
-    setthreadidentity(Old)
-
-    return Success, Response
-end
 
 local function IsValid(Parsed, Checked)
     local Checked = Checked or {}
@@ -668,24 +681,6 @@ local OldNewIndex; OldNewIndex = hookmetamethod(game, "__newindex", function(...
         local Function = Arguments[2]
         local FunctionInfo = getinfo(Function)
         local Info, Traceback = GetCaller(...)
-
-        --[==[return OldNewIndex(self, "OnClientInvoke", function(...)
-            local Success, Response = SafeCall(Function, ...)
-
-            --[[if not Success then --// Commented out because I know of an easy way to bypass, but feel free to enable it if you wish
-                return coroutine.resume(Thread, unpack(Response))
-            end]]
-
-            if RemoteSpyEnabled and Enabled["OnClientInvoke"] then
-                Log({self = self, What = Name, Method = "InvokeClient", Script = Info.short_src, Arguments = {...}, FunctionInfo = FunctionInfo, Info = Info, Response = not Success and "Script Error: "..Response or Response, Traceback = Traceback})
-            end
-
-            if not Success then
-                return;
-            end
-
-            return unpack(Response)
-        end)]==]
 
         local Old; Old = hookfunction(Function, NUB([=[local Success, Response = <<pcall>>(<<Old>>, ...)
 

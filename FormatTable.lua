@@ -303,6 +303,8 @@ end
 local _FormatTable; _FormatTable = YieldableFunc(function(Table, Options, Indents, Checked, Root)
     if typeof(Table) ~= "table" and typeof(Table) ~= "userdata" then
         return;
+    elseif Checked and Checked[Table] then
+        return ParseObject(Table, false, false, Checked, Root or "Table", Options, Indents)
     end
 
     local Metatable, IsProxy = getrawmetatable(Table), typeof(Table) == "userdata"
@@ -316,7 +318,7 @@ local _FormatTable; _FormatTable = YieldableFunc(function(Table, Options, Indent
     if TableCount >= 3e3 then
         return ("{ \"Table is too large\" }; --// Max: 5e3, Got: %d"):format(TableCount)
     elseif IsProxy then
-        local Key, Comment = Options.MetatableKey;
+        local Key, Comment = Options.MetatableKey, "";
 
         if Key and Metatable and rawget(Metatable, Key) ~= nil then
             Table = rawget(Metatable, Key)
@@ -324,7 +326,7 @@ local _FormatTable; _FormatTable = YieldableFunc(function(Table, Options, Indent
             Comment = CreateComment("Defined by caller", Options)
         end
 
-        return (Metatable and "setmetatable(%s, %s)%s" or "%s%s%s"):format(Tostring(Table), Metatable and _FormatTable(Metatable, Options, Indents, Checked) or Comment or "", Metatable and Comment or ""), Comment and "DBC" or false, Table
+        return (Metatable and "setmetatable(%s, %s)%s" or "%s%s%s"):format(Tostring(Table), Metatable and _FormatTable(Metatable, Options, Indents, Checked) or Comment, Metatable and Comment or ""), Comment and "DBC" or false, Table
     end
 
     local NewTable, Results, Thread = {}, {}, Threading.new()
