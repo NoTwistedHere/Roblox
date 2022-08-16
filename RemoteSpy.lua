@@ -575,7 +575,7 @@ for Name, Method in next, Methods do
         if Success and IsResponse then
             return Response
         elseif not Success then
-            Save(("ERROR: %s\nTraceback: %s"):format(IsResponse, debug.traceback()))
+            Save(("ERROR: %s\nTraceback: %s"):format(tostring(IsResponse), debug.traceback()))
         end
 
         return Original(self, unpack(OArguments)) --unpack(Response)
@@ -631,7 +631,7 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
     if Success and IsResponse then
         return Response
     elseif not Success then
-        Save(("ERROR: %s\nTraceback: %s"):format(IsResponse, debug.traceback()))
+        Save(("ERROR: %s\nTraceback: %s"):format(tostring(IsResponse), debug.traceback()))
     end
 
     --[[if typeof(self) == "Instance" and IsValidMethod(self.ClassName, Method) then
