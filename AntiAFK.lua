@@ -1,7 +1,3 @@
---[[
-    I personally wouldn't use atm, it is detected
-]]
-
 local VirtualInputManager = Instance.new("VirtualInputManager")
 local UserInputService = game:GetService("UserInputService")
 local Hooks = {}
