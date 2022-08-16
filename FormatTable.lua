@@ -178,10 +178,10 @@ local function GetPath(Object, Sub)
     local Path = GetName(Object.Name):reverse()
     local Parent = Object.Parent
     
-    if not Sub and Object == game then
+    if Object == game then
         Path = ("game"):reverse()
     elseif not Sub and IsService(Object) then
-        Path ..= (":GetService(\"%s\")"):format(Object.ClassName):reverse()
+        Path = (":GetService(\"%s\")"):format(Object.ClassName):reverse()
         Path ..= GetPath(Parent, true)
     elseif Parent == game then
         Path = ("game"):reverse()
@@ -303,17 +303,19 @@ end
 local _FormatTable; _FormatTable = YieldableFunc(function(Table, Options, Indents, Checked, Root)
     if typeof(Table) ~= "table" and typeof(Table) ~= "userdata" then
         return;
-    elseif Checked and Checked[Table] then
+    end
+    
+    Root = typeof(Root) == "string" and Root or "Table"
+    Checked = type(Checked) == "table" and Checked or {}
+    Indents = Options.NoIndentation and 1 or Indents or 1
+    Checked[Table] = TableCount
+
+    if Checked and Checked[Table] then
         return ParseObject(Table, false, false, Checked, Root or "Table", Options, Indents)
     end
 
     local Metatable, IsProxy = getrawmetatable(Table), typeof(Table) == "userdata"
     local TableCount, TabWidth, Count = IsProxy and 0 or CountTable(Table), Options.NoIndentation and " " or "    ", 1
-
-    Root = Root or "Table"
-    Checked = Checked or {}
-    Indents = Options.NoIndentation and 1 or Indents or 1
-    Checked[Table] = TableCount
 
     if TableCount >= 3e3 then
         return ("{ \"Table is too large\" }; --// Max: 5e3, Got: %d"):format(TableCount)
@@ -368,7 +370,7 @@ local _FormatTable; _FormatTable = YieldableFunc(function(Table, Options, Indent
                 end
 
                 local IsValid = (type(Value) == "table" or typeof(Value) == "userdata") and not Checked[Value]
-                local ParsedValue, IsComment, ReParse = _FormatTable(Value, Options, Indents + 1, Checked, NewRoot)
+                local ParsedValue, IsComment, ReParse = IsValid and _FormatTable(Value, Options, Indents + 1, Checked, NewRoot);
                 local Parsed = {ParseObject((IsComment == "DBC" or not ReParse) and Value or ReParse, true, true, Checked, NewRoot, Options, Indents)}
                 local Comment = ((IsComment == "DBC" or IsValid) and Parsed[1]..(Parsed[2] and " " or "") or "") .. (Parsed[2] and Parsed[2] or "")
 
