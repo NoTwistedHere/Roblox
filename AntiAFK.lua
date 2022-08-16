@@ -1,4 +1,4 @@
-local VirtualInputManager = game:GetService("VirtualInputManager")
+local VirtualInputManager = Instance.new("VirtualInputManager")
 local UserInputService = game:GetService("UserInputService")
 local Hooks = {}
 
