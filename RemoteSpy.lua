@@ -634,14 +634,14 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
         setthreadidentity(Old)
     end
     
-    local Success, IsResponse, Response = pcall(FuckYou, unpack(OArguments))
+    local Success, IsResponse, Response = xpcall(FuckYou, function(e)
+        return ("ERROR: %s\nTraceback: %s"):format(tostring(e), debug.traceback())
+    end, unpack(OArguments))
 
     if Success and IsResponse then
         return Response
     elseif not Success then
-        pcall(function()
-            Save(("ERROR: %s\nTraceback: %s"):format(tostring(IsResponse), debug.traceback()))
-        end)
+        coroutine.yield(Save, IsResponse)
     end
 
     --[[if typeof(self) == "Instance" and IsValidMethod(self.ClassName, Method) then
