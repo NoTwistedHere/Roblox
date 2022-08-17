@@ -398,23 +398,18 @@ local _FormatTable; _FormatTable = YieldableFunc(function(Table, Options, Indent
                 local EndResult = ""
 
                 for i, v in next, Results do
-                    if v:find("FindFunction") then
-                        EndResult ..= v .. (Options.OneLine and "" or "\n")
-                        continue;
-                    end
-
-                    EndResult ..= v:gsub("function: 0x([0-9a-f]+)", function(h) return ("FindFunction(\"function: 0x%s\")"):format(h) end) .. (Options.OneLine and "" or "\n")
+                    EndResult ..= v:gsub("function: 0x([0-9a-f]+)", function(h) return ("FindFunction(\"%s\")"):format(h) end) .. (Options.OneLine and "" or "\n")
                 end
 
-                return {"local function FindFunction(k) for _, v in next, getgc() do if tostring(v) == k then return v end end end\n", EndResult .. " "}
+                return {"local function FindFunction(k) for _, v in next, getgc() do if tostring(v) == \"function: 0x\" .. k then return v end end end\n", EndResult .. " "}
             else
                 for i, v in next, Results do
-                    Results[i] = v:gsub("function: 0x([0-9a-f]+)", function(h) return ("FindFunction(\"function: 0x%s\")"):format(h) end)
+                    Results[i] = v:gsub("function: 0x([0-9a-f]+)", function(h) return ("FindFunction(\"%s\")"):format(h) end)
                 end
             end
         end
 
-        return (Metatable and "setmetatable(%s, %s)" or "%s"):format(TableCount == 0 and "{}" or ("{%s%s%s%s}"):format(Options.OneLine and "" or "\n", table.concat(Results, Options.OneLine and "" or "\n"), Options.OneLine and " " or "\n", string.rep(TabWidth, Indents - 1)), Metatable and _FormatTable(Metatable, Options, Indents, Checked))
+        return (Metatable and "setmetatable(%s, %s)" or "%s"):format(TableCount == 0 and "{}" or ("{%s%s%s%s}"):format(Options.OneLine and "" or "\n", table.concat(Results, Options.OneLine and "" or "\n"), Options.OneLine and " " or "\n", string.rep(TabWidth, Indents - 1)), Metatable and _FormatTable(Metatable, Options, Indents, Checked, Root))
     end, function(e)
         return ("FormatTable Error: [[\n%s\n%s]]"):format(e, debug.traceback())
     end)
