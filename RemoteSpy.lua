@@ -199,8 +199,6 @@ local function GetPath(Object, Sub)
 end
 
 local function GenerateC(self, Method, Arguments)
-    warn(self, Method, Arguments)
-
     local R = FormatTable(Arguments or {}, {NoIndentation = true, OneLine = true, NoComments = true, IgnoreNumberIndex = true, GenerateScript = true})
 
     if type(R) == "string" then
@@ -351,7 +349,7 @@ local function GetCaller(Arguments)
         end
         
         if Info.source ~= Source then
-            table.insert(Traceback, ("%s:%d%s"):format(Info.short_src, Info.currentline, Info.name ~= "" and " function " .. Info.name or ""))
+            table.insert(Traceback, ("%s:%d%s"):format(Info.short_src, Info.currentline, Info.name and Info.name ~= "" and " function " .. Info.name or ""))
         end
 
         if Info.what ~= "C" and not isexecutorfunction(Info.func) and not FirstInfo then
@@ -535,6 +533,10 @@ for Name, Method in next, Methods do
         local self, OArguments = SortArguments(...)
         OArguments = V2CheckArguments(OArguments)[3]
 
+        if getinfo(2).source == Source then
+            return Original(...)
+        end
+
         local function FuckYou(...)
             local Old = getthreadidentity()
             setthreadidentity(7)
@@ -575,7 +577,9 @@ for Name, Method in next, Methods do
         if Success and IsResponse then
             return Response
         elseif not Success then
-            Save(("ERROR: %s\nTraceback: %s"):format(tostring(IsResponse), debug.traceback()))
+            pcall(function()
+                Save(("ERROR: %s\nTraceback: %s"):format(tostring(IsResponse), debug.traceback()))
+            end)
         end
 
         return Original(self, unpack(OArguments)) --unpack(Response)
@@ -588,6 +592,10 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
     local self, OArguments = SortArguments(...)
     local Method = getnamecallmethod()
     OArguments = V2CheckArguments(OArguments)[3]
+
+    if getinfo(2).source == Source then
+        return OldNamecall(...)
+    end
     
     local function FuckYou(...)
         local Old = getthreadidentity()
@@ -631,7 +639,9 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
     if Success and IsResponse then
         return Response
     elseif not Success then
-        Save(("ERROR: %s\nTraceback: %s"):format(tostring(IsResponse), debug.traceback()))
+        pcall(function()
+            Save(("ERROR: %s\nTraceback: %s"):format(tostring(IsResponse), debug.traceback()))
+        end)
     end
 
     --[[if typeof(self) == "Instance" and IsValidMethod(self.ClassName, Method) then

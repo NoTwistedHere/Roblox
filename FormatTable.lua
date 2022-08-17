@@ -101,7 +101,7 @@ local function IsService(Object)
     return Success and Response
 end
 
-local function Tostring(Object)
+local function Tostring(Object, One)
     local Metatable = getrawmetatable(Object)
 
     if Metatable and rawget(Metatable, "__tostring") then
@@ -112,6 +112,10 @@ local function Tostring(Object)
         Response = tostring(Object)
         rawset(Metatable, "__tostring", Old)
         setreadonly(Metatable, IsReadOnly)
+
+        if One then
+            return Response
+        end
 
         return Response, " [Metatable]"
     end
@@ -301,111 +305,121 @@ local function CreateComment(Comment, Options, Existing)
 end
 
 local _FormatTable; _FormatTable = YieldableFunc(function(Table, Options, Indents, Checked, Root)
-    if typeof(Table) ~= "table" and typeof(Table) ~= "userdata" then
-        return;
-    end
-    
-    Root = typeof(Root) == "string" and Root or "Table"
-    Checked = type(Checked) == "table" and Checked or {}
-    Indents = Options.NoIndentation and 1 or Indents or 1
-    Checked[Table] = TableCount
+    local Success, Response = xpcall(function()
+        if typeof(Table) ~= "table" and typeof(Table) ~= "userdata" then
+            return;
+        end
+        
+        Root = typeof(Root) == "string" and Root or "Table"
+        Checked = type(Checked) == "table" and Checked or {}
+        Indents = Options.NoIndentation and 1 or Indents or 1
+        Checked[Table] = TableCount
 
-    if Checked and Checked[Table] then
-        return ParseObject(Table, false, false, Checked, Root or "Table", Options, Indents)
-    end
-
-    local Metatable, IsProxy = getrawmetatable(Table), typeof(Table) == "userdata"
-    local TableCount, TabWidth, Count = IsProxy and 0 or CountTable(Table), Options.NoIndentation and " " or "    ", 1
-
-    if TableCount >= 3e3 then
-        return ("{ \"Table is too large\" }; --// Max: 5e3, Got: %d"):format(TableCount)
-    elseif IsProxy then
-        local Key, Comment = Options.MetatableKey, "";
-
-        if Key and Metatable and rawget(Metatable, Key) ~= nil then
-            Table = rawget(Metatable, Key)
-            Metatable = nil
-            Comment = CreateComment("Defined by caller", Options)
+        if Checked and Checked[Table] then
+            return ParseObject(Table, false, false, Checked, Root or "Table", Options, Indents)
         end
 
-        return (Metatable and "setmetatable(%s, %s)%s" or "%s%s%s"):format(Tostring(Table), Metatable and _FormatTable(Metatable, Options, Indents, Checked) or Comment, Metatable and Comment or ""), Comment and "DBC" or false, Table
-    end
+        local Metatable, IsProxy = getrawmetatable(Table), typeof(Table) == "userdata"
+        local TableCount, TabWidth, Count = IsProxy and 0 or CountTable(Table), Options.NoIndentation and " " or "    ", 1
 
-    local NewTable, Results, Thread = {}, {}, Threading.new()
+        if TableCount >= 3e3 then
+            return ("{ \"Table is too large\" }; --// Max: 5e3, Got: %d"):format(TableCount)
+        elseif IsProxy then
+            local Key, Comment = Options.MetatableKey, "";
 
-    for i, v in next, Table do
-        table.insert(NewTable, {i, v})
-    end
+            if Key and Metatable and rawget(Metatable, Key) ~= nil then
+                Table = rawget(Metatable, Key)
+                Metatable = nil
+                Comment = CreateComment("Defined by caller", Options)
+            end
 
-    for ThreadNum = 0, math.ceil(TableCount / 200) - 1 do
-        Thread:Add(function()
-            for TIndex = 1, 200 do
-                local Data = NewTable[TIndex + (200 * ThreadNum)]
+            return (Metatable and "setmetatable(%s, %s)%s" or "%s%s%s"):format(Tostring(Table), Metatable and (_FormatTable(Metatable, Options, Indents, Checked, Root) or "PrintTable Error: An unexpected error occured") or Comment, Comment), Comment and "DBC" or false, Table
+        end
 
-                if not Data then
-                    break;
+        local NewTable, Results, Thread = {}, {}, Threading.new()
+
+        for i, v in next, Table do
+            table.insert(NewTable, {i, v})
+        end
+
+        for ThreadNum = 0, math.ceil(TableCount / 200) - 1 do
+            Thread:Add(function()
+                for TIndex = 1, 200 do
+                    xpcall(function()
+                        local Data = NewTable[TIndex + (200 * ThreadNum)]
+
+                        if not Data then
+                            return;
+                        end
+
+                        local Index, Value = Data[1], Data[2]
+
+                        local NewRoot = Root..("[%s]"):format(Stringify(Index, Options))
+                        local AlreadyLogged = type(Value) == "table" and (Checked[Value] or CheckForClone(Checked, Value))
+
+                        local function Format(...)
+                            local Arguments = {...}
+                            
+                            if type(Index) == "number" and Options.IgnoreNumberIndex then
+                                table.remove(Arguments, 2)
+
+                                return ("%s%s%s%s"):format(unpack(Arguments))
+                            end
+
+                            return ("%s[%s] = %s%s%s"):format(...)
+                        end
+
+                        if AlreadyLogged then
+                            Results[TIndex] = Format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot, Options, Indents), Tostring(Value), Count < TableCount and "," or "", Checked[Value] and "" or CreateComment("Duplicate of "..Tostring(AlreadyLogged), Options))
+                            Count += 1
+                            return;
+                        end
+
+                        local IsValid = (type(Value) == "table" or typeof(Value) == "userdata") and not Checked[Value]
+                        local ParsedValue, IsComment, ReParse = IsValid and _FormatTable(Value, Options, Indents + 1, Checked, NewRoot);
+                        local Parsed = {ParseObject((IsComment == "DBC" or not ReParse) and Value or ReParse, true, true, Checked, NewRoot, Options, Indents)}
+                        local Comment = ((IsComment == "DBC" or IsValid) and Parsed[1]..(Parsed[2] and " " or "") or "") .. (Parsed[2] and Parsed[2] or "")
+
+                        Results[TIndex] = Format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot, Options, Indents), ParsedValue or Parsed[1], Count < TableCount and "," or "", #Comment > 0 and CreateComment(Comment or "", Options, IsComment))
+                        Count += 1
+                    end, function(e)
+                        Results[TIndex] = ("FormatTable Error: [[\n%s\n%s]]"):format(e, debug.traceback())
+                    end)
                 end
+            end)
+        end
 
-                local Index, Value = Data[1], Data[2]
+        if TableCount > 0 then
+            Thread.Ended:Wait("f")
+        end
 
-                local NewRoot = Root..("[%s]"):format(Stringify(Index, Options))
-                local AlreadyLogged = type(Value) == "table" and (Checked[Value] or CheckForClone(Checked, Value))
+        if Options.GenerateScript then
+            if Root == "Table" then
+                local EndResult = ""
 
-                local function Format(...)
-                    local Arguments = {...}
-                    
-                    if type(Index) == "number" and Options.IgnoreNumberIndex then
-                        table.remove(Arguments, 2)
-
-                        return ("%s%s%s%s"):format(unpack(Arguments))
+                for i, v in next, Results do
+                    if v:find("FindFunction") then
+                        EndResult ..= v .. (Options.OneLine and "" or "\n")
+                        continue;
                     end
 
-                    return ("%s[%s] = %s%s%s"):format(...)
+                    EndResult ..= v:gsub("function: 0x([0-9a-f]+)", function(h) return ("FindFunction(\"function: 0x%s\")"):format(h) end) .. (Options.OneLine and "" or "\n")
                 end
 
-                if AlreadyLogged then
-                    Results[TIndex] = Format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot, Options, Indents), Tostring(Value), Count < TableCount and "," or "", Checked[Value] and "" or CreateComment("Duplicate of "..Tostring(AlreadyLogged), Options))
-                    Count += 1
-                    continue;
+                return {"local function FindFunction(k) for _, v in next, getgc() do if tostring(v) == k then return v end end end\n", EndResult .. " "}
+            else
+                for i, v in next, Results do
+                    Results[i] = v:gsub("function: 0x([0-9a-f]+)", function(h) return ("FindFunction(\"function: 0x%s\")"):format(h) end)
                 end
-
-                local IsValid = (type(Value) == "table" or typeof(Value) == "userdata") and not Checked[Value]
-                local ParsedValue, IsComment, ReParse = IsValid and _FormatTable(Value, Options, Indents + 1, Checked, NewRoot);
-                local Parsed = {ParseObject((IsComment == "DBC" or not ReParse) and Value or ReParse, true, true, Checked, NewRoot, Options, Indents)}
-                local Comment = ((IsComment == "DBC" or IsValid) and Parsed[1]..(Parsed[2] and " " or "") or "") .. (Parsed[2] and Parsed[2] or "")
-
-                Results[TIndex] = Format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot, Options, Indents), ParsedValue or Parsed[1], Count < TableCount and "," or "", #Comment > 0 and CreateComment(Comment or "", Options, IsComment))
-                Count += 1
-            end
-        end)
-    end
-
-    if TableCount > 0 then
-        Thread.Ended:Wait("f")
-    end
-
-    if Options.GenerateScript then
-        if Root == "Table" then
-            local EndResult = ""
-
-            for i, v in next, Results do
-                if v:find("FindFunction") then
-                    EndResult ..= v .. (Options.OneLine and "" or "\n")
-                    continue;
-                end
-
-                EndResult ..= v:gsub("function: 0x([0-9a-f]+)", function(h) return ("FindFunction(\"function: 0x%s\")"):format(h) end) .. (Options.OneLine and "" or "\n")
-            end
-
-            return {"local function FindFunction(k) for _, v in next, getgc() do if tostring(v) == k then return v end end end\n", EndResult .. " "}
-        else
-            for i, v in next, Results do
-                Results[i] = v:gsub("function: 0x([0-9a-f]+)", function(h) return ("FindFunction(\"function: 0x%s\")"):format(h) end)
             end
         end
-    end
 
-    return (Metatable and "setmetatable(%s, %s)" or "%s"):format(TableCount == 0 and "{}" or ("{%s%s%s%s}"):format(Options.OneLine and "" or "\n", table.concat(Results, Options.OneLine and "" or "\n"), Options.OneLine and " " or "\n", string.rep(TabWidth, Indents - 1)), Metatable and _FormatTable(Metatable, Options, Indents, Checked))
+        return (Metatable and "setmetatable(%s, %s)" or "%s"):format(TableCount == 0 and "{}" or ("{%s%s%s%s}"):format(Options.OneLine and "" or "\n", table.concat(Results, Options.OneLine and "" or "\n"), Options.OneLine and " " or "\n", string.rep(TabWidth, Indents - 1)), Metatable and _FormatTable(Metatable, Options, Indents, Checked))
+    end, function(e)
+        return ("FormatTable Error: [[\n%s\n%s]]"):format(e, debug.traceback())
+    end)
+
+    return Response
 end)
 
 
@@ -416,15 +430,19 @@ getgenv().FormatTable = YieldableFunc(function(Table, Options)
 
     Options = Options or {}
 
-    local Success, Response = pcall(_FormatTable, Table, Options, Options.Indents)
+    local Success, Response = xpcall(_FormatTable, function(e)
+        return ("FormatTable Error: [[\n%s\n%s]]"):format(e, debug.traceback())
+    end, Table, Options, Options.Indents)
 
-    return (Success and Response) or ("FormatTable Error: \"%s\""):format(Response)
+    return Response
 end)
 
 getgenv().FormatArguments = YieldableFunc(function(...)
-    local Success, Response = pcall(_FormatTable, {...}, {})
+    local Success, Response = xpcall(_FormatTable, function(e)
+        return ("FormatTable Error: [[\n%s\n%s]]"):format(e, debug.traceback())
+    end, {...}, {})
 
-    return (Success and Response) or ("FormatTable Error: \"%s\""):format(Response)
+    return Response
 end)
 
 return FormatTable
