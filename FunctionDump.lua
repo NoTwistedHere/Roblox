@@ -254,7 +254,7 @@ getgenv().DumpFunctions = function()
 
     for Source, Dump in next, Scripts do
         if Threads.Active == ScriptsPerThread then
-            Threads.Available:Wait("fg")
+            Threads.Available:Wait()
         end
 
         Threads:Add(function()

@@ -16,7 +16,7 @@ function Signalling:Fire(...)
 end
 
 function Signalling:Wait(Arg, C)
-    if self.Active == 0 or (Arg == "f" and self.Fired) or (Arg == "fg" and self.Active ~= C) then
+    if Arg == "f" and self.Fired then
         return;
     end
 
@@ -26,10 +26,6 @@ function Signalling:Wait(Arg, C)
 end
 
 function Signalling:Connect(Callback)
-    if self.Active == 0 then
-        return;
-    end
-
     table.insert(self.Callbacks, Callback)
     
     return self
