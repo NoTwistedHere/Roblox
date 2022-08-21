@@ -1,7 +1,10 @@
 --[[
     Report any bugs, issues and detections to me if you don't mind (NoTwistedHere#6703)
+    V3 SaveInstance isn't the best so I had to make some adjustments in order for this to work with v3 :) (doesn't work though)
 ]]
 
+local getname = function(Object) if Object:IsA("Script") and getscriptname then return getscriptname(Object) end return Object.Name end
+local gethash = function(Object) local Success, Response = pcall(function() return getscripthash(Object) end) if Success and type(Response) == "string" then return Response end return; end
 local Threading = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/Threading.lua"))()
 local CoreGui, CorePackages, Players, RunService, RunService = game:GetService("CoreGui"), game:GetService("CorePackages"), game:GetService("Players"), game:GetService("RunService"), game:GetService("RunService")
 local Result = "<roblox xmlns:xmime=\"http://www.w3.org/2005/05/xmlmime\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"http://www.roblox.com/roblox.xsd\" version=\"4\">"
@@ -79,7 +82,6 @@ if isfile(MainDirectory..SubDirectory..FileName..FileType) then
 end
 
 Final = MainDirectory..SubDirectory..FileName..FileType
-writefile(Final, "")
 
 local function GiveColour(Current, Max)
     return (Current < Max * 0.25 and "@@RED@@") or (Current < Max * 0.5 and "@@YELLOW@@") or (Current < Max * 0.75 and "@@CYAN@@") or "@@GREEN@@"
@@ -157,7 +159,7 @@ end
 
 local function FindScripts(Table)
     for i, v in next, Table do
-        if typeof(v) == "Instance" and (v:IsA("LocalScript") or v:IsA("ModuleScript")) or (not IgnoreEmpty or IgnoreEmpty and not getscripthash(v)) then
+        if typeof(v) == "Instance" and (v:IsA("LocalScript") or v:IsA("ModuleScript")) or (not IgnoreEmpty or IgnoreEmpty and not gethash(v)) then
             return true
         end
     end
@@ -168,7 +170,7 @@ end
 local function GetClassName(Object)
     local ClassName = Object.ClassName
 
-    if (Object:IsA("LocalScript") or Object:IsA("ModuleScript")) and getscripthash(Object) == nil and IgnoreEmpty then
+    if (Object:IsA("LocalScript") or Object:IsA("ModuleScript")) and not gethash(Object) and IgnoreEmpty then
         if not FindScripts(Object:GetDescendants()) then
             return;
         end
@@ -192,10 +194,10 @@ local function MakeInstance(Object, PGB)
         return ""
     end
 
-    local IntResult = ("<Item class=\"%s\" referent=\"RBX%s\"><Properties><string name=\"Name\">%s</string>"):format(ClassName, Object:GetDebugId(0), SteralizeString(Object.Name))
+    local IntResult = ("<Item class=\"%s\" referent=\"RBX%s\"><Properties><string name=\"Name\">%s</string>"):format(ClassName, Object:GetDebugId(0), SteralizeString(getname(Object)))
     
     if (ClassName == "LocalScript" or ClassName == "ModuleScript") then
-        local Hash = getscripthash(Object)
+        local Hash = gethash(Object)
         local Source = Hash and (DecompiledScripts[Hash] or "--// Failed to decompile") or "--// Script has no bytecode"
 
         if ClassName == "LocalScript" then
@@ -283,26 +285,27 @@ local function FindNextScript()
 end
 
 local function DecompileScripts()
-    local Threads = Threading.new("Group")
+    local ThreadingGroup = Threading.new("Group", true)
     local Ended = false
     local PGB = ProgressBar(("\nDecompiling Scripts [%s]"):format(#Scripts), 0, #Scripts, coroutine.running())
 
     while true do
         if Ended then
             break;
-        elseif Threads.Active == Threads then
-            Threads.Available:Wait("fg")
+        elseif ThreadingGroup.Active == Threads then
+            ThreadingGroup.Available:Wait("fg", Threads)
         end
 
-        Threads:Add(function()
+        ThreadingGroup:Add(function()
             local Script = FindNextScript()
 
             if not Script then
                 Ended = true
+                ThreadingGroup.Ended:Fire()
                 return;
             end
 
-            local Hash = getscripthash(Script)
+            local Hash = gethash(Script)
 
             if Hash and not DecompiledScripts[Hash] then    
                 DecompiledScripts[Hash] = "--// Decompiling..."
@@ -314,7 +317,7 @@ local function DecompileScripts()
         end)
     end
 
-    Threads.Ended:Wait()
+    ThreadingGroup.Ended:Wait()
 end
 
 RunService:Set3dRenderingEnabled(false)
