@@ -1,11 +1,12 @@
 local Threading = {}
 local Signalling = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/Signalling.lua"))()
 
-function Threading.new(Option)
+function Threading.new(Option, Auto)
     return setmetatable({
         Threads = 0;
         Active = 0;
         Option = Option;
+        AutoFire = Auto;
         Ended = Signalling.new();
         Available = Option == "Group" and Signalling.new();
     }, { __index = Threading })
@@ -23,12 +24,12 @@ function Threading:Add(Function)
             self.Available:Fire()
             task.wait()
             
-            if self.Active == 0 then
+            if self.AutoFire and self.Active == 0 then
                 self.Ended:Fire()
             end
         end
 
-        if not self.Available and self.Active == 0 then
+        if self.AutoFire and not self.Available and self.Active == 0 then
             self.Ended:Fire()
         end
     end)()
