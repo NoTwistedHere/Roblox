@@ -31,6 +31,7 @@ FormatTable({ workspace, 20, { pcall, 0X20 } }, {
     MetatableKey = nil;
     GenerateScript = false;
     NoAntiRep = false;
+    LargeStrings = false;
 })
 
 FormatArguments(a, "b", 1, game:GetService("Players"), pcall)
@@ -42,6 +43,7 @@ local Result = FormatTable({ 1, "b", game:GetService("Players").LocalPlayer}, {
     MetatableKey = Key;
     GenerateScript = true;
     NoAntiRep = false;
+    LargeStrings = false;
 }) --// Will return a table with two arguments, [1] will contain FindFunction(), [2] will contain the generated code
 
 local Proxy, Key = newproxy(true), game:GetService("HttpService"):GenerateGUID(false)
@@ -55,6 +57,7 @@ FormatTable({ workspace, 20, Proxy }, {
     MetatableKey = Key;
     GenerateScript = false;
     NoAntiRep = false;
+    LargeStrings = false;
 })
 ```
 

@@ -137,7 +137,7 @@ local function Stringify(String, Options, Extra, Checked, Root)
         return Checked[String]
     end
 
-    if #String > 5e3 then
+    if not Options.LargeStrings and #String > 5e3 then
         local Message = ("\"String is larger than 5e3 (Very Large) #%s\""):format(HttpService:GenerateGUID())
         Add(Message)
 
