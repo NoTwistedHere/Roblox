@@ -231,7 +231,7 @@ getgenv().DumpFunctions = function()
 
     rconsoleclear()
     rconsolename("FunctionDumper")
-    local CPB = ProgressBar("\nCollecting Functions", Thread, 0, 1,Thread)
+    local CPB = ProgressBar("\nCollecting Functions", 0, 1,Thread)
 
     for i, v in next, GC do
         local Info = type(v) == "function" and islclosure(v) and not is_synapse_function(v) and getinfo(v)
@@ -248,7 +248,7 @@ getgenv().DumpFunctions = function()
     end
 
     CPB(1, 1)
-    local CPB = ProgressBar(("\nDumping Functions [%d]"):format(TotalFunctions), Thread, 0, 1, Thread)
+    local CPB = ProgressBar(("\nDumping Functions [%d]"):format(TotalFunctions), 0, 1, Thread)
     local Count = 0
     local Threads = Threading.new("Group")
 

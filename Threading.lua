@@ -16,7 +16,7 @@ function Threading:Add(Function)
     self.Threads += 1
     self.Active += 1
 
-    coroutine.wrap(function() --// task.spawn takes the piss; it takes a lot longer to call task.* than spawn/delay/coroutine.*
+    task.spawn(function() --// task.spawn takes the piss; it takes a lot longer to call task.* than spawn/delay/coroutine.*
         Function()
         self.Active -= 1
         
@@ -32,7 +32,7 @@ function Threading:Add(Function)
         if self.AutoFire and not self.Available and self.Active == 0 then
             self.Ended:Fire()
         end
-    end)()
+    end)
 
     return self
 end

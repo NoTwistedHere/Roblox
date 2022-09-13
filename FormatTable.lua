@@ -282,6 +282,10 @@ local function IncrementalRepeat(ToRepeat, Repeat, Increment)
 end
 
 local function YieldableFunc(OriginalFunction) --// Used to work, don't know if it still does
+    if syn.oth then
+        return OriginalFunction
+    end
+
     local NoUV = #getupvalues(OriginalFunction) + 1
     local Variables, Values = IncrementalRepeat("_", NoUV, true), IncrementalRepeat("game", NoUV)
     local New = newcclosure(loadstring(([[

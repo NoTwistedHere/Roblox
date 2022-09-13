@@ -331,6 +331,10 @@ local function GetCaller(Arguments)
         if not Info then
             local NewInfo = FirstInfo or getinfo(i - 1)
 
+            if syn.oth then
+                table.remove(Traceback, 1)
+            end
+
             if GetCallerV2 then
                 local ValidArgs = V2CheckArguments(Arguments)
 
@@ -527,13 +531,21 @@ local function ReturnArguments(Arguments, ...)
     return ...
 end
 
+local function GetSource()
+    if syn.oth then
+        return getinfo(2).source
+    end
+
+    return getinfo(3).source
+end
+
 for Name, Method in next, Methods do
     local Func = Instance.new(Name)[Method]
     local Original; Original = hookfunction(Func, function(...)
         local self, OArguments = SortArguments(...)
         OArguments = V2CheckArguments(OArguments)[3]
 
-        if getinfo(2).source == Source then
+        if GetSource() == Source then
             return Original(...)
         end
 
@@ -593,7 +605,7 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
     local Method = getnamecallmethod()
     OArguments = V2CheckArguments(OArguments)[3]
 
-    if getinfo(2).source == Source then
+    if GetSource().source == Source then
         return OldNamecall(...)
     end
     
