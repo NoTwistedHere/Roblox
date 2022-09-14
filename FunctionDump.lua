@@ -52,8 +52,8 @@ local function Stringify(String)
     return NewString
 end
 
-local function GiveColour(Current, Max)
-    return (Current < Max * 0.25 and "@@RED@@") or (Current < Max * 0.5 and "@@YELLOW@@") or (Current < Max * 0.75 and "@@CYAN@@") or "@@GREEN@@"
+local function GiveColour(Current, Max, C)
+    return (Current < Max * 0.25 and (C and Color3.fromRGB(255, 0, 0) or "@@RED@@")) or (Current < Max * 0.5 and (C and Color3.fromRGB(255, 255, 0) or "@@YELLOW@@")) or (Current < Max * 0.75 and (C and Color3.fromRGB(0, 255, 255) or "@@CYAN@@")) or (C and Color3.fromRGB(0, 255, 0) or "@@GREEN@@")
 end
 
 local function GetLoading()
@@ -86,9 +86,13 @@ local function ProgressBar(Header, Current, Max, Thread)
 
         PreviousCur = Current
         PreviousMax = Max
-        rconsoleprint(GiveColour(Current, Max))
-        rconsoleprint(("\13%s%s %s%s"):format(("#"):rep(Progress), ("."):rep(Size - Progress), Percentage.."%", Percentage == 100 and "!\n" or Extra_After or LoadingChar))
-        rconsoleprint("@@WHITE@@")
+        if not syn.oth then
+            rconsoleprint(GiveColour(Current, Max))
+            rconsoleprint(("\13%s%s %s%s"):format(("#"):rep(Progress), ("."):rep(Size - Progress), Percentage.."%", Percentage == 100 and "!\n" or Extra_After or LoadingChar))
+            rconsoleprint("@@WHITE@@")
+        else
+            rconsoleprint(("\13%s%s %s%s"):format(("#"):rep(Progress), ("."):rep(Size - Progress), Percentage.."%", Percentage == 100 and "!\n" or Extra_After or LoadingChar), GiveColour(Current, Max, true))
+        end
 
         if Percentage == 100 then
             Complete = true
@@ -236,7 +240,7 @@ getgenv().DumpFunctions = function()
     for i, v in next, GC do
         local Info = type(v) == "function" and islclosure(v) and not is_synapse_function(v) and getinfo(v)
 
-        if Info then
+        if Info and Info.source.sub(1, 1) ~= "@" and Info.source ~= "=[C]" then
             if not Scripts[Info.source] then
                 Scripts[Info.source] = {}
             end
