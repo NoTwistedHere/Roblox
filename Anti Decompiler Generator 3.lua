@@ -1,3 +1,5 @@
+--// I would like to note this won't be finished as I'm not trying to release an anti decompiler for v3
+
 local AlphabeticalCharset = {}
 local Blacklisted = { "\"", "'", "[", "]", "%" }
 local Operators = { "+", "-", "*", "/", "^" }
