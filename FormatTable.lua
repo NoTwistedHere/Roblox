@@ -147,7 +147,7 @@ local function Stringify(String, Options, Extra, Checked, Root)
     end
 
     if Options.RawStrings then
-        return String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("%c", function(Char) return "\\"..string.byte(Char) end)
+        return "\"" .. String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("%c", function(Char) return "\\"..string.byte(Char) end) .. "\""
     end
     
     return ConvertCodepoints(AntiRep(Options, String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("%c", function(Char) return "\\"..string.byte(Char) end), Extra))
