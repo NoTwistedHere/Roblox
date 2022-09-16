@@ -145,6 +145,10 @@ local function Stringify(String, Options, Extra, Checked, Root)
     elseif #String > 2e2 then
         Add()
     end
+
+    if Options.RawStrings then
+        return String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("%c", function(Char) return "\\"..string.byte(Char) end)
+    end
     
     return ConvertCodepoints(AntiRep(Options, String:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("%c", function(Char) return "\\"..string.byte(Char) end), Extra))
 end
