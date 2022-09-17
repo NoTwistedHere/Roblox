@@ -65,9 +65,9 @@ end
 
 local function ConvertCodepoints(OriginalString, Modified, Extra)
     if OriginalString:match("[^%a%c%d%l%p%s%u%x]") then
-        local Utf8String = "utf8.char("
+        --local Utf8String = "utf8.char("
 
-        if not pcall(function() for i, v in utf8.codes(OriginalString) do Utf8String ..= ("%s%s"):format(i > 1 and ", " or "", v) end end) then
+        --if not pcall(function() for i, v in utf8.codes(OriginalString) do Utf8String ..= ("%s%s"):format(i > 1 and ", " or "", v) end end) then
             local String = ""
 
             for i = 1, #OriginalString do
@@ -81,13 +81,13 @@ local function ConvertCodepoints(OriginalString, Modified, Extra)
             end
 
             return "\"" .. String .. "\"", Extra and true or false
-        end
+        --[[end
         
         if Extra then
             return Utf8String .. ")", true
         end
 
-        return Utf8String ..")"
+        return Utf8String ..")"]]
     end
 
     return "\""..OriginalString.."\"", Extra and Modified > 0 or nil
