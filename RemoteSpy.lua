@@ -1,5 +1,7 @@
 --[[
     Report any bugs, issues and detections to me if you don't mind (NoTwistedHere#6703)
+
+    adding syn V3 support made this go bye bye :(
 ]]
 
 if not FormatTable then
@@ -7,9 +9,7 @@ if not FormatTable then
 end
 local NUB = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/NoUpvalueHook.lua"))()
 
-print(1)
-
-getgenv().WriteToFile = WriteToFile or true
+getgenv().WriteToFile = WriteToFile or false
 getgenv().RobloxConsole = RobloxConsole or false
 getgenv().GetCallerV2 = GetCallerV2 or false --// BETA - You are more vulnerable to detections!
 getgenv().RemoteSpyEnabled = RemoteSpyEnabled or true
@@ -51,8 +51,6 @@ local hookmetamethod = hookmetamethod or newcclosure(function(Object, Metamethod
     return hookfunction(Original, Function)
 end)
 
-print(2)
-
 if not isexecutorfunction or not getinfo or not hookmetamethod or not setthreadidentity then
     game:GetService("Players").LocalPlayer:Kick("Unsupported exploit")
     return;
@@ -76,8 +74,6 @@ if isfile(Directory..FileName..FileType) then
         writefile(Directory..FileName..FileType, "")
     end
 end
-
-print(3)
 
 local function ConvertCodepoints(OriginalString) --// cba to rename it
     if OriginalString:match("[^%a%c%d%l%p%s%u%x]") then
@@ -575,7 +571,7 @@ for Name, Method in next, Methods do
 
             OArguments["#"] = select("#", ...)
 
-            if RemoteSpyEnabled and #OArguments <= 7995 and ArgGuard(self, ...) and Enabled[self.ClassName] and not Ignore(self, ...) then
+            if RemoteSpyEnabled and #OArguments <= 7995 and ArgGuard(...) and Enabled[self.ClassName] and not Ignore(...) then
                 local Info, Traceback, Arguments = GetCaller({...}) --// Because the stack trace gets removed from _Args
                 local Thread = coroutine.running()
 
