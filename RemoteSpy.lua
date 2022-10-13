@@ -7,7 +7,9 @@ if not FormatTable then
 end
 local NUB = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/NoUpvalueHook.lua"))()
 
-getgenv().WriteToFile = WriteToFile or false
+print(1)
+
+getgenv().WriteToFile = WriteToFile or true
 getgenv().RobloxConsole = RobloxConsole or false
 getgenv().GetCallerV2 = GetCallerV2 or false --// BETA - You are more vulnerable to detections!
 getgenv().RemoteSpyEnabled = RemoteSpyEnabled or true
@@ -35,7 +37,7 @@ local Methods = {
 }
 local Hooks = {}
 local Stacks, Source = {}, getinfo(1).source
-local Directory, FileName, FileType = "RemoteSpyLogs/", ("RemoteSpy Logs [%s_%s]"):format(game.PlaceId, game.PlaceVersion), ".luau"
+local Directory, FileName, FileType = "RemoteSpyLogs/", ("RemoteSpy Logs [%s_%s]"):format(game.PlaceId, game.PlaceVersion), ".lua"
 local HttpService = game:GetService("HttpService")
 local isexecutorfunction = isexecutorfunction or is_synapse_function or isexecutorclosure or isourclosure or function(f) return getinfo(f, "s").source:find("@") and true or false end
 local getthreadidentity = getthreadidentity or syn.get_thread_identity
@@ -48,6 +50,8 @@ local hookmetamethod = hookmetamethod or newcclosure(function(Object, Metamethod
     
     return hookfunction(Original, Function)
 end)
+
+print(2)
 
 if not isexecutorfunction or not getinfo or not hookmetamethod or not setthreadidentity then
     game:GetService("Players").LocalPlayer:Kick("Unsupported exploit")
@@ -72,6 +76,8 @@ if isfile(Directory..FileName..FileType) then
         writefile(Directory..FileName..FileType, "")
     end
 end
+
+print(3)
 
 local function ConvertCodepoints(OriginalString) --// cba to rename it
     if OriginalString:match("[^%a%c%d%l%p%s%u%x]") then
@@ -198,6 +204,20 @@ local function GetPath(Object, Sub)
     return Path:reverse()
 end
 
+local function FixArgS(Arguments)
+	if #Arguments == Arguments["#"] then
+		return ""
+	end
+
+	local Extra = ", "
+
+	for i = #Arguments, Arguments["#"] do
+		Extra = "nil, "
+	end
+
+	return Extra:sub(0, -3)
+end
+
 local function GenerateC(self, Method, Arguments)
     local R = FormatTable(Arguments or {}, {NoIndentation = true, OneLine = true, NoComments = true, IgnoreNumberIndex = true, GenerateScript = true})
 
@@ -207,7 +227,7 @@ local function GenerateC(self, Method, Arguments)
 
     local Result = tostring(R[1])
 
-    Result ..= tostring(self) .. ":" .. tostring(Method) .. "(" .. tostring(R[2]) .. ")" --// I can't be bothered to fix shitty names and stuff
+    Result ..= tostring(self) .. ":" .. tostring(Method) .. "(" .. tostring(R[2]) .. FixArgS(Arguments) .. ")" --// I can't be bothered to fix shitty names and stuff
     
     return Result
 end
@@ -222,7 +242,7 @@ local function Log(Arguments, NewThread)
                     Arguments[i] = Stringify(v)
                 elseif type(v) == "table" then
                     if i == "Traceback" then
-                        Arguments[i] = FormatTable(v, {NoComments = true, IgnoreNumberIndex = true})
+                        Arguments[i] = FormatTable(v, {NoComments = true, IgnoreNumberIndex = true, NumLength = true})
                         continue;
                     end
 
@@ -298,11 +318,11 @@ local function FixTable(Table)
 end
 
 local function V2CheckArguments(Arguments)
-    if type(Arguments) ~= "table" then
+    --[[if type(Arguments) ~= "table" then
         return false
-    elseif not GetCallerV2 then
+    elseif not GetCallerV2 then]]
         return {false, {}, Arguments}
-    end
+    --[[end
 
     local Traceback, Info = {};
 
@@ -319,7 +339,7 @@ local function V2CheckArguments(Arguments)
         end
     end
 
-    return {Info, Traceback, FixTable(Arguments)}
+    return {Info, Traceback, FixTable(Arguments)}]]
 end
 
 local function GetCaller(Arguments)
@@ -335,7 +355,7 @@ local function GetCaller(Arguments)
                 table.remove(Traceback, 1)
             end
 
-            if GetCallerV2 then
+            --[[if GetCallerV2 then
                 local ValidArgs = V2CheckArguments(Arguments)
 
                 if ValidArgs then
@@ -347,7 +367,7 @@ local function GetCaller(Arguments)
 
                     return NewInfo, Traceback, ValidArgs[3]
                 end
-            end
+            end]]
             
             return NewInfo, Traceback, Arguments
         end
@@ -370,7 +390,7 @@ local function IsValidMethod(ClassName, Method)
     return Methods[ClassName] == Method:sub(1, 1):upper()..Method:sub(2, #Method)
 end
 
-if GetCallerV2 then
+--[[if GetCallerV2 then
     local IsNotTraceable = {
         getrenv().coroutine.create,
         getrenv().coroutine.wrap,
@@ -521,7 +541,7 @@ if GetCallerV2 then
     HookFuncThread(getrenv().task.spawn)
     HookFuncThread(getrenv().task.defer)
     HookFuncThread(getrenv().task.delay)
-end
+end]]
 
 local function ReturnArguments(Arguments, ...)
     --[[if GetCallerV2 and #Arguments <= 7995 then
@@ -543,7 +563,7 @@ for Name, Method in next, Methods do
     local Func = Instance.new(Name)[Method]
     local Original; Original = hookfunction(Func, function(...)
         local self, OArguments = SortArguments(...)
-        OArguments = V2CheckArguments(OArguments)[3]
+        --OArguments = V2CheckArguments(OArguments)[3]
 
         if GetSource() == Source then
             return Original(...)
@@ -552,6 +572,8 @@ for Name, Method in next, Methods do
         local function FuckYou(...)
             local Old = getthreadidentity()
             setthreadidentity(7)
+
+            OArguments["#"] = select("#", ...)
 
             if RemoteSpyEnabled and #OArguments <= 7995 and ArgGuard(self, ...) and Enabled[self.ClassName] and not Ignore(self, ...) then
                 local Info, Traceback, Arguments = GetCaller({...}) --// Because the stack trace gets removed from _Args
@@ -562,7 +584,7 @@ for Name, Method in next, Methods do
                     local Response1 = {}
 
                     task.spawn(function(...)
-                        local Success, Response = SortArguments(pcall(Original, self, ...))
+                        local Success, Response = SortArguments(pcall(Original, ...))
 
                         --[[if not Success then
                             return coroutine.resume(Thread, unpack(Response))
@@ -586,7 +608,7 @@ for Name, Method in next, Methods do
         
         local Success, IsResponse, Response = xpcall(FuckYou, function(e)
             return ("ERROR: %s\nTraceback: %s"):format(tostring(e), debug.traceback())
-        end, unpack(OArguments))
+        end, ...)
 
         if Success and IsResponse then
             return Response
@@ -594,7 +616,7 @@ for Name, Method in next, Methods do
             coroutine.wrap(Save, IsResponse)
         end
 
-        return Original(self, unpack(OArguments)) --unpack(Response)
+        return Original(...) --unpack(Response)
     end)
 
     Hooks[Func] = Original
@@ -603,7 +625,7 @@ end
 local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...)
     local self, OArguments = SortArguments(...)
     local Method = getnamecallmethod()
-    OArguments = V2CheckArguments(OArguments)[3]
+    --OArguments = V2CheckArguments(OArguments)[3]
 
     if GetSource().source == Source then
         return OldNamecall(...)
@@ -613,7 +635,9 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
         local Old = getthreadidentity()
         setthreadidentity(7)
 
-        if RemoteSpyEnabled and #OArguments <= 7995 and ArgGuard(self, ...) and Enabled[self.ClassName] and IsValidMethod(self.ClassName, Method) and not Ignore(...) then
+        OArguments["#"] = select("#", ...)
+
+        if RemoteSpyEnabled and #OArguments <= 7995 and ArgGuard(...) and Enabled[self.ClassName] and IsValidMethod(self.ClassName, Method) and not Ignore(...) then
             local Info, Traceback, Arguments = GetCaller({...})
             local Thread = coroutine.running()
 
@@ -623,7 +647,7 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
 
                 task.spawn(function(...)
                     setnamecallmethod(Method)
-                    local Success, Response = SortArguments(pcall(OldNamecall, self, ...))
+                    local Success, Response = SortArguments(pcall(OldNamecall, ...))
 
                     --[[if not Success then
                         return coroutine.resume(Thread, unpack(Response))
@@ -648,7 +672,7 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
     
     local Success, IsResponse, Response = xpcall(FuckYou, function(e)
         return ("ERROR: %s\nTraceback: %s"):format(tostring(e), debug.traceback())
-    end, unpack(OArguments))
+    end, ...)
 
     if Success and IsResponse then
         return Response
@@ -660,7 +684,7 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
         return OldNamecall(ReturnArguments(Arguments, ...))
     end]]
 
-    return OldNamecall(self, unpack(OArguments)) --unpack(Response)
+    return OldNamecall(...) --unpack(Response)
 end)
 
 local function IsValid(Parsed, Checked)

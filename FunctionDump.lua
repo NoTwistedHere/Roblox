@@ -214,7 +214,7 @@ getgenv().DumpScript = function(Source) --// Outdated, cba to update tbh
     table.sort(Functions, function(a, b) return a[2].currentline < b[2].currentline end)
 
     for i, Data in next, Functions do
-        appendfile(File, FormatTable(Write(Data[1]), {MetatableKey = Key}))
+        appendfile(Final, FormatTable(Write(Data[1]), {MetatableKey = Key}))
 
         CPB(i, #Functions)
     end
@@ -238,9 +238,9 @@ getgenv().DumpFunctions = function()
     local CPB = ProgressBar("\nCollecting Functions", 0, 1,Thread)
 
     for i, v in next, GC do
-        local Info = type(v) == "function" and islclosure(v) and not is_synapse_function(v) and getinfo(v)
+        local Info = type(v) == "function" and getinfo(v)
 
-        if Info and Info.source.sub(1, 1) ~= "@" and Info.source ~= "=[C]" then
+        if Info and Info.source ~= "=[C]" and Info.source:sub(1, 1) == "=" then
             if not Scripts[Info.source] then
                 Scripts[Info.source] = {}
             end
@@ -259,22 +259,27 @@ getgenv().DumpFunctions = function()
     for Source, Dump in next, Scripts do
         if Threads.Active == ScriptsPerThread then
             Threads.Available:Wait()
+            warn("NEXT")
         end
 
+        task.wait()
+
         Threads:Add(function()
-            local Final, FinalData, Thread = CheckFile(Directory, Source), {}, Threading.new()
+            local Final, FinalData, Thread = CheckFile(Directory, Source), {}, Threading.new("N/A", true)
 
             table.sort(Dump, function(a, b) return a[2].currentline < b[2].currentline end)
 
             writefile(Final, "")
 
-            for ThreadNum = 0, math.ceil(#Dump / FunctionsPerThread) - 1 do
+            local Max = math.ceil(#Dump / FunctionsPerThread) - 1
+
+            for ThreadNum = 0, Max do
                 Thread:Add(function()
                     for TIndex = 1, 201 do
                         local Data, FDCount, FDWrite = Dump[TIndex + (FunctionsPerThread * ThreadNum)], 0, {};
 
                         if not Data then
-                            continue;
+                            break;
                         end
 
                         FinalData[Data[2].currentline] = {Data[2].currentline, FormatTable(Write(Data[1]), {MetatableKey = Key}).."\n"}
@@ -297,6 +302,12 @@ getgenv().DumpFunctions = function()
 
                         Count += 1
                         CPB(Count, TotalFunctions)
+                    end
+
+                    CPB(Count, TotalFunctions)
+
+                    if ThreadNum == Max then
+                        Thread.Ended:Fire("done")
                     end
                 end)
             end

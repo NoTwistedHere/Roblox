@@ -59,7 +59,7 @@ local function Log(Function, Method, ...)
             return error(Response, 0)
         end
 
-        appendfile(File, FormatTable({ Method = Method, Timestamp = Timestamp() Request = {...}, Response = Response }, { LargeStrings = true, RawStrings = true }) .. "\n")
+        appendfile(File, FormatTable({ Method = Method, Timestamp = Timestamp(), Request = {...}, Response = Response }, { LargeStrings = true, RawStrings = true }) .. "\n")
 
         if coroutine.status(Thread) ~= "suspended" then
             repeat
@@ -145,7 +145,7 @@ OldNC = hookmetamethod(game, "__namecall", function(...)
     local Method = getnamecallmethod()
     local NoMethod = Method:sub(1, 7)
 
-    if checkcaller() self and typeof(self) == "Instance" and self == Game and (Method == "HttpGet" or Method == "HttpGetAsync" or Method == "HttpPost" or Method == "HttpPostAsync") then
+    if checkcaller() and self and typeof(self) == "Instance" and self == Game and (Method == "HttpGet" or Method == "HttpGetAsync" or Method == "HttpPost" or Method == "HttpPostAsync") then
         LogNC(Method, ...)
     end
 
