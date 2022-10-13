@@ -330,7 +330,7 @@ local _FormatTable; _FormatTable = YieldableFunc(function(Table, Options, Indent
         local Metatable, IsProxy = getrawmetatable(Table), typeof(Table) == "userdata"
         local TableCount, TabWidth, Count = IsProxy and 0 or CountTable(Table), Options.NoIndentation and " " or "    ", 1
 
-        if TableCount >= 3e3 then
+        if TableCount >= 3e3 and not Options.LargeTables then
             return ("{ \"Table is too large\" }; --// Max: 5e3, Got: %d"):format(TableCount)
         elseif IsProxy then
             local Key, Comment = Options.MetatableKey, "";
@@ -348,6 +348,14 @@ local _FormatTable; _FormatTable = YieldableFunc(function(Table, Options, Indent
 
         for i, v in next, Table do
             table.insert(NewTable, {i, v})
+        end
+
+        if Options.NumLength then
+            if #Table ~= Table["#"] then
+                for i = #Table + 1, Table["#"] do
+                    table.insert(NewTable, {i, nil})
+                end
+            end
         end
 
         for ThreadNum = 0, math.ceil(TableCount / 200) - 1 do
