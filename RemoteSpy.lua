@@ -11,7 +11,7 @@ if not Branch and not FormatTable then
 end
 local NUB = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/" .. (Branch or "main") .. "/NoUpvalueHook.lua"))()
 
-getgenv().WriteToFile = WriteToFile or false
+getgenv().WriteToFile = WriteToFile or true
 getgenv().RobloxConsole = RobloxConsole or false
 getgenv().GetCallerV2 = GetCallerV2 or false --// BETA - You are more vulnerable to detections!
 getgenv().RemoteSpyEnabled = RemoteSpyEnabled or true
