@@ -5,9 +5,9 @@
 ]]
 
 if not FormatTable then
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/FormatTable.lua"))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/" .. Branch or "main" .. "/FormatTable.lua"))()
 end
-local NUB = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/NoUpvalueHook.lua"))()
+local NUB = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/" .. Branch or "main" .. "/NoUpvalueHook.lua"))()
 
 getgenv().WriteToFile = WriteToFile or false
 getgenv().RobloxConsole = RobloxConsole or false

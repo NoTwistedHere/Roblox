@@ -12,7 +12,7 @@
 local BlacklistedMethods = {}
 local isexecutorfunction = isexecutorfunction or is_synapse_function or isexecutorclosure or isourclosure or function(f) return getinfo(f, "s").source:find("@") and true or false end
 local getthreadidentity, setthreadidentity = getthreadidentity or syn.get_thread_identity, setthreadidentity or syn.set_thread_identity
-local NUB = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/main/NoUpvalueHook.lua"))()
+local NUB = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/" .. Branch or "main" .. "/NoUpvalueHook.lua"))()
 
 local function TrueString(String)
     if type(String) ~= "string" then
