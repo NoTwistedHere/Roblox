@@ -6,7 +6,7 @@
 
 Branch = "beta"
 
-if not Branch and not FormatTable then
+if Branch or not FormatTable then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/" .. (Branch or "main") .. "/FormatTable.lua"))()
 end
 local NUB = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/" .. (Branch or "main") .. "/NoUpvalueHook.lua"))()
@@ -230,10 +230,16 @@ local function GenerateC(self, Method, Arguments)
     return Result
 end
 
+local function FixGenArgs(Args) --// Simple
+    Args["#"] = nil
+
+    return Args
+end
+
 local function Log(Arguments, NewThread)
     local function Main()
         xpcall(function()
-            local GeneratedCode = GenerateCode and Arguments.Info and GenerateC(Arguments.What, Arguments.RawMethod or Arguments.Method, Arguments.Arguments) or "Disabled"
+            local GeneratedCode = GenerateCode and Arguments.Info and GenerateC(Arguments.What, Arguments.RawMethod or Arguments.Method, FixGenArgs(Arguments.Arguments)) or "Disabled"
 
             for i, v in next, Arguments do
                 if type(v) == "string" and i ~= "What" then
@@ -241,6 +247,9 @@ local function Log(Arguments, NewThread)
                 elseif type(v) == "table" then
                     if i == "Traceback" then
                         Arguments[i] = FormatTable(v, {NoComments = true, IgnoreNumberIndex = true, NumLength = true})
+                        continue;
+                    elseif i == "Arguments" then
+                        Arguments[i] = FormatTable(v, {NumLength = true})
                         continue;
                     end
 
@@ -637,7 +646,7 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
         local Old = getthreadidentity()
         setthreadidentity(7)
 
-        OArguments["#"] = select("#", ...)
+        OArguments["#"] = select("#", ...) - 1
 
         if RemoteSpyEnabled and #OArguments <= 7995 and ArgGuard(...) and Enabled[self.ClassName] and IsValidMethod(self.ClassName, Method) and not Ignore(...) then
             local Info, Traceback, Arguments = GetCaller({...})

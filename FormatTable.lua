@@ -347,6 +347,10 @@ local _FormatTable; _FormatTable = YieldableFunc(function(Table, Options, Indent
         local NewTable, Results, Thread = {}, {}, Threading.new()
 
         for i, v in next, Table do
+            if Options.NumLength and i == "#" then
+                continue;
+            end
+            
             table.insert(NewTable, {i, v})
         end
 
@@ -367,6 +371,10 @@ local _FormatTable; _FormatTable = YieldableFunc(function(Table, Options, Indent
                         end
 
                         local Index, Value = Data[1], Data[2]
+
+                        if Options.NumLength and Index == "#" then
+                            return;
+                        end
 
                         local NewRoot = Root..("[%s]"):format(Stringify(Index, Options))
                         local AlreadyLogged = type(Value) == "table" and (Checked[Value] or CheckForClone(Checked, Value))
