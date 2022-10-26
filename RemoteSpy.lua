@@ -588,9 +588,13 @@ for Name, Method in next, Methods do
                 
                         Log({self = self, What = GetPath(self), RawMethod = Method, Method = Method .. " (Raw)", Script = Info.short_src, Arguments = OArguments, Info = Info, Response = Response, Traceback = Traceback})
 
+                        task.spawn(function() --// seems pointless, ik
+                            BindableEvent.Event:Wait()
+                            BindableEvent:Destroy()
+                        end)
+                        
                         Response1 = Response
                         BindableEvent:Fire(unpack(Response))
-                        BindableEvent:Destroy()
                     end, unpack(Arguments))
                 
                     return true, Response1 and unpack(Response1) or BindableEvent.Event:Wait()
@@ -651,9 +655,13 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
 
                     Log({self = self, What = GetPath(self), Method = Method, Script = Info.short_src, Arguments = OArguments, Info = Info, Response = Response, Traceback = Traceback})
 
+                    task.spawn(function() --// seems pointless, ik
+                        BindableEvent.Event:Wait()
+                        BindableEvent:Destroy()
+                    end)
+
                     Response1 = Response
                     BindableEvent:Fire(unpack(Response))
-                    BindableEvent:Destroy()
                 end, ...)
 
                 return true, Response1 and unpack(Response1) or BindableEvent.Event:Wait()

@@ -350,11 +350,9 @@ local _FormatTable; _FormatTable = YieldableFunc(function(Table, Options, Indent
             table.insert(NewTable, {i, v})
         end
 
-        if Options.NumLength then
-            if #Table ~= Table["#"] then
-                for i = #Table + 1, Table["#"] do
-                    table.insert(NewTable, {i, nil})
-                end
+        if Options.NumLength and type(Table["#"]) == "number" and #Table ~= Table["#"] then
+            for i = #Table + 1, Table["#"] do
+                table.insert(NewTable, {i, nil})
             end
         end
 
