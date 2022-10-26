@@ -1,5 +1,5 @@
 local Threading = {}
-local Signalling = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/" .. Branch or "main" .. "/Signalling.lua"))()
+local Signalling = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/" .. (Branch or "main") .. "/Signalling.lua"))()
 
 function Threading.new(Option, Manual)
     return setmetatable({

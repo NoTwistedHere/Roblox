@@ -2,7 +2,7 @@
     Report any bugs, issues and detections to me if you don't mind (NoTwistedHere#6703)
 ]]
 
-local Threading = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/" .. Branch or "main" .. "/Threading.lua"))()
+local Threading = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/" .. (Branch or "main") .. "/Threading.lua"))()
 local HttpService = game:GetService("HttpService")
 local ObjectTypes = {
     ["nil"] = 1;

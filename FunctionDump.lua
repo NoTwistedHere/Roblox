@@ -3,10 +3,10 @@
 ]]
 
 if not FormatTable then
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/" .. Branch or "main" .. "/FormatTable.lua"))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/" .. (Branch or "main") .. "/FormatTable.lua"))()
 end
 
-local Threading = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/" .. Branch or "main" .. "/Threading.lua"))()
+local Threading = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/" .. (Branch or "main") .. "/Threading.lua"))()
 local Place = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
 local Global, Local = "Function Dumps/", ("%s [%d]/"):format(tostring(Place and Place.Name or "Unknown Game"):gsub("[^%w%s]", ""), game.PlaceId)
 local Key = game:GetService("HttpService"):GenerateGUID(false)

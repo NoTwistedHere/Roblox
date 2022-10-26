@@ -4,10 +4,12 @@
     adding syn V3 support made this go bye bye :(
 ]]
 
-if not FormatTable then
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/" .. Branch or "main" .. "/FormatTable.lua"))()
+Branch = "beta"
+
+if not Branch and not FormatTable then
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/" .. (Branch or "main") .. "/FormatTable.lua"))()
 end
-local NUB = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/" .. Branch or "main" .. "/NoUpvalueHook.lua"))()
+local NUB = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/" .. (Branch or "main") .. "/NoUpvalueHook.lua"))()
 
 getgenv().WriteToFile = WriteToFile or false
 getgenv().RobloxConsole = RobloxConsole or false
