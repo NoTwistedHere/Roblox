@@ -286,7 +286,7 @@ local function IncrementalRepeat(ToRepeat, Repeat, Increment)
 end
 
 local function YieldableFunc(OriginalFunction) --// Used to work, don't know if it still does
-    if syn.oth then
+    if syn and syn.oth then
         return OriginalFunction
     end
 
@@ -378,6 +378,10 @@ local _FormatTable; _FormatTable = YieldableFunc(function(Table, Options, Indent
 
                         local NewRoot = Root..("[%s]"):format(Stringify(Index, Options))
                         local AlreadyLogged = type(Value) == "table" and (Checked[Value] or CheckForClone(Checked, Value))
+
+                        if type(Value) == "table" and not AlreadyLogged then
+                            Checked[Value] = CountTable(Value)
+                        end
 
                         local function Format(...)
                             local Arguments = {...}

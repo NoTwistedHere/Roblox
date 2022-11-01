@@ -1,7 +1,12 @@
 --[[
     Report any bugs, issues and detections to me if you don't mind (NoTwistedHere#6703)
 
-    adding syn V3 support made this go bye bye :(
+    [=[BETA]=]
+
+    Detections:
+        https://www.roblox.com/games/9334350521/Hades-Anti-Cheat (not directly a remotespy detection, but script execution)
+    Safe:
+        https://www.roblox.com/games/6993368317/SilentEye-Testing
 ]]
 
 Branch = "beta"
@@ -203,7 +208,7 @@ local function GetPath(Object, Sub)
 end
 
 local function FixArgS(Arguments)
-	if #Arguments == Arguments["#"] then
+	if type(Arguments["#"]) ~= "number" or #Arguments == Arguments["#"] then
 		return ""
 	end
 
@@ -358,7 +363,7 @@ local function GetCaller(Arguments)
         if not Info then
             local NewInfo = FirstInfo or getinfo(i - 1)
 
-            if syn.oth then
+            if syn and syn.oth then
                 table.remove(Traceback, 1)
             end
 
@@ -390,7 +395,23 @@ local function GetCaller(Arguments)
 end
 
 local function SortArguments(self, ...)
-    return self, {...}
+    local Args = {...}
+
+    if select("#", ...) ~= #Args then
+        Args["#"] = select("#", ...)
+    end
+
+    return self, Args
+end
+
+local function Unpack(Table, ...)
+    local Final = "";
+
+    if Table["#"] then
+        Final = "return " .. ("nil,"):rep(Table["#"] - #Table):sub(0, -2)
+    end
+
+    return unpack(Table), loadstring(Final)
 end
 
 local function IsValidMethod(ClassName, Method)
@@ -559,7 +580,7 @@ local function ReturnArguments(Arguments, ...)
 end
 
 local function GetSource()
-    if syn.oth then
+    if syn and syn.oth then
         return getinfo(2).source
     end
 
@@ -576,11 +597,13 @@ for Name, Method in next, Methods do
             return Original(...)
         end
 
+        local MainRes;
+
         local function FuckYou(...)
             local Old = getthreadidentity()
             setthreadidentity(7)
 
-            OArguments["#"] = select("#", ...)
+            OArguments["#"] = select("#", ...) - 1
 
             if RemoteSpyEnabled and #OArguments <= 7995 and ArgGuard(...) and Enabled[self.ClassName] and not Ignore(...) then
                 local Info, Traceback, Arguments = GetCaller({...}) --// Because the stack trace gets removed from _Args
@@ -592,6 +615,8 @@ for Name, Method in next, Methods do
 
                     task.spawn(function(...)
                         local Success, Response = SortArguments(pcall(Original, ...))
+
+                        MainRes = Response
 
                         --[[if not Success then
                             return coroutine.resume(Thread, unpack(Response))
@@ -605,10 +630,10 @@ for Name, Method in next, Methods do
                         end)
                         
                         Response1 = Response
-                        BindableEvent:Fire(unpack(Response))
-                    end, unpack(Arguments))
+                        BindableEvent:Fire(Unpack(Response))
+                    end, Unpack(Arguments))
                 
-                    return true, Response1 and unpack(Response1) or BindableEvent.Event:Wait()
+                    return true, Response1 and Unpack(Response1) or BindableEvent.Event:Wait()
                 end
 
                 Log({self = self, What = GetPath(self), RawMethod = Method, Method = Method .. " (Raw)", Script = Info.short_src, Arguments = OArguments, Info = Info, Traceback = Traceback}, true)
@@ -627,6 +652,10 @@ for Name, Method in next, Methods do
             coroutine.wrap(Save, IsResponse)
         end
 
+        if MainRes then
+            return Unpack(MainRes)
+        end
+
         return Original(...) --unpack(Response)
     end)
 
@@ -641,6 +670,8 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
     if GetSource().source == Source then
         return OldNamecall(...)
     end
+
+    local MainRes;
     
     local function FuckYou(...)
         local Old = getthreadidentity()
@@ -660,6 +691,8 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
                     setnamecallmethod(Method)
                     local Success, Response = SortArguments(pcall(OldNamecall, ...))
 
+                    MainRes = Response
+
                     --[[if not Success then
                         return coroutine.resume(Thread, unpack(Response))
                     end]]
@@ -672,10 +705,10 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
                     end)
 
                     Response1 = Response
-                    BindableEvent:Fire(unpack(Response))
+                    BindableEvent:Fire(Unpack(Response))
                 end, ...)
 
-                return true, Response1 and unpack(Response1) or BindableEvent.Event:Wait()
+                return true, Response1 and Unpack(Response1) or BindableEvent.Event:Wait()
             end
 
             Log({self = self, What = GetPath(self), Method = Method, Script = Info.short_src, Arguments = OArguments, Info = Info, Traceback = Traceback}, true)
@@ -693,6 +726,10 @@ local OldNamecall; OldNamecall = hookmetamethod(game, "__namecall", function(...
         return Response
     elseif not Success then
         coroutine.wrap(Save, IsResponse)
+    end
+
+    if MainRes then
+        return Unpack(MainRes)
     end
 
     --[[if typeof(self) == "Instance" and IsValidMethod(self.ClassName, Method) then
