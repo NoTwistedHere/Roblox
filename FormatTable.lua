@@ -317,15 +317,15 @@ local _FormatTable; _FormatTable = YieldableFunc(function(Table, Options, Indent
         if typeof(Table) ~= "table" and typeof(Table) ~= "userdata" then
             return;
         end
-        
-        Root = typeof(Root) == "string" and Root or "Table"
-        Checked = type(Checked) == "table" and Checked or {}
-        Indents = Options.NoIndentation and 1 or Indents or 1
-        Checked[Table] = TableCount
 
         if Checked and Checked[Table] then
             return ParseObject(Table, false, false, Checked, Root or "Table", Options, Indents)
         end
+        
+        Root = typeof(Root) == "string" and Root or "Table"
+        Checked = type(Checked) == "table" and Checked or {}
+        Indents = Options.NoIndentation and 1 or Indents or 1
+        Checked[Table] = Tostring(Table)
 
         local Metatable, IsProxy = getrawmetatable(Table), typeof(Table) == "userdata"
         local TableCount, TabWidth, Count = IsProxy and 0 or CountTable(Table), Options.NoIndentation and " " or "    ", 1
@@ -379,10 +379,6 @@ local _FormatTable; _FormatTable = YieldableFunc(function(Table, Options, Indent
                         local NewRoot = Root..("[%s]"):format(Stringify(Index, Options))
                         local AlreadyLogged = type(Value) == "table" and (Checked[Value] or CheckForClone(Checked, Value))
 
-                        if type(Value) == "table" and not AlreadyLogged then
-                            Checked[Value] = CountTable(Value)
-                        end
-
                         local function Format(...)
                             local Arguments = {...}
                             
@@ -396,12 +392,13 @@ local _FormatTable; _FormatTable = YieldableFunc(function(Table, Options, Indent
                         end
 
                         if AlreadyLogged then
-                            Results[TIndex] = Format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot, Options, Indents), Tostring(Value), Count < TableCount and "," or "", Checked[Value] and "" or CreateComment("Duplicate of "..Tostring(AlreadyLogged), Options))
+                            Results[TIndex] = Format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot, Options, Indents), Tostring(Value), Count < TableCount and "," or "", CreateComment("[[ DUPLICATE ]]", Options))
                             Count += 1
                             return;
                         end
 
                         local IsValid = (type(Value) == "table" or typeof(Value) == "userdata") and not Checked[Value]
+
                         local ParsedValue, IsComment, ReParse = IsValid and _FormatTable(Value, Options, Indents + 1, Checked, NewRoot);
                         local Parsed = {ParseObject((IsComment == "DBC" or not ReParse) and Value or ReParse, true, true, Checked, NewRoot, Options, Indents)}
                         local Comment = ((IsComment == "DBC" or IsValid) and Parsed[1]..(Parsed[2] and " " or "") or "") .. (Parsed[2] and Parsed[2] or "")
@@ -435,7 +432,7 @@ local _FormatTable; _FormatTable = YieldableFunc(function(Table, Options, Indent
             end
         end
 
-        return (Metatable and "setmetatable(%s, %s)" or "%s"):format(TableCount == 0 and "{}" or ("{%s%s%s%s}"):format(Options.OneLine and "" or "\n", table.concat(Results, Options.OneLine and "" or "\n"), Options.OneLine and " " or "\n", string.rep(TabWidth, Indents - 1)), Metatable and _FormatTable(Metatable, Options, Indents, Checked, Root))
+        return (Metatable and "setmetatable(%s, %s) --// %s" or "%s"):format(TableCount == 0 and "{}" or ("{%s%s%s%s}"):format(Options.OneLine and "" or "\n", table.concat(Results, Options.OneLine and "" or "\n"), Options.OneLine and " " or "\n", string.rep(TabWidth, Indents - 1)), Metatable and _FormatTable(Metatable, Options, Indents, Checked, Root), Tostring(Table) .. " // " .. Tostring(Metatable))
     end, function(e)
         return ("FormatTable Error: [[\n%s\n%s]]"):format(e, debug.traceback())
     end)
