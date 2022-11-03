@@ -325,10 +325,11 @@ local _FormatTable; _FormatTable = YieldableFunc(function(Table, Options, Indent
         Root = typeof(Root) == "string" and Root or "Table"
         Checked = type(Checked) == "table" and Checked or {}
         Indents = Options.NoIndentation and 1 or Indents or 1
-        Checked[Table] = Tostring(Table)
 
         local Metatable, IsProxy = getrawmetatable(Table), typeof(Table) == "userdata"
         local TableCount, TabWidth, Count = IsProxy and 0 or CountTable(Table), Options.NoIndentation and " " or "    ", 1
+
+        Checked[Table] = TableCount
 
         if TableCount >= 3e3 and not Options.LargeTables then
             return ("{ \"Table is too large\" }; --// Max: 5e3, Got: %d"):format(TableCount)
