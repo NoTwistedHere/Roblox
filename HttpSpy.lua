@@ -80,7 +80,7 @@ local OldRequest; OldRequest = hookfunction(GEnv.syn.request, function(...)
         return OldRequest(...)
     end
 
-    return Log(OldRequest, Request)
+    return Log(OldRequest, "request", Request)
 end)
 
 local OldGet;

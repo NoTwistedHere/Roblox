@@ -2,7 +2,7 @@
     Report any bugs, issues and detections to me if you don't mind (NoTwistedHere#6703)
 ]]
 
-local Threading = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/" .. (Branch or "main") .. "/Threading.lua"))()
+local Threading, Signalling = {}, {}
 local HttpService = game:GetService("HttpService")
 local ObjectTypes = {
     ["nil"] = 1;
@@ -18,6 +18,81 @@ local ObjectTypes = {
     ["NumberSequenceKeypoint"] = 8;
     ["NumberSequence"] = 9;
 }
+
+function Signalling:Fire(...)
+    self.Fired = true
+
+    for i, v in next, self.Callbacks do
+        if type(v) == "function" then
+            task.spawn(v, ...)
+        elseif type(v) == "thread" then
+            task.spawn(coroutine.resume, v, ...)
+            table.remove(self.Callbacks, table.find(self.Callbacks, v))
+        end
+    end
+
+    return Signalling
+end
+
+function Signalling:Wait(Arg, C)
+    if Arg == "f" and self.Fired then
+        return;
+    end
+
+    table.insert(self.Callbacks, coroutine.running())
+
+    return coroutine.yield()
+end
+
+function Signalling:Connect(Callback)
+    table.insert(self.Callbacks, Callback)
+    
+    return self
+end
+
+function Signalling:Disconnect(Callback)
+    table.remove(self.Callbacks, table.find(self.Callbacks, Callback))
+end
+
+function Signalling.new()
+    return setmetatable({ Callbacks = {} }, { __index = Signalling })
+end
+
+function Threading.new(Option, Manual)
+    return setmetatable({
+        Threads = 0;
+        Active = 0;
+        Option = Option;
+        AutoFire = not Manual;
+        Ended = Signalling.new();
+        Available = Option == "Group" and Signalling.new();
+    }, { __index = Threading })
+end
+
+function Threading:Add(Function)
+    self.Threads += 1
+    self.Active += 1
+
+    coroutine.wrap(function() --// task.spawn takes the piss; it takes a lot longer to call task.* than spawn/delay/coroutine.*
+        Function()
+        self.Active -= 1
+        
+        if self.Available then
+            self.Available:Fire()
+            task.wait()
+            
+            if self.AutoFire and self.Active == 0 then
+                self.Ended:Fire()
+            end
+        end
+
+        if self.AutoFire and not self.Available and self.Active == 0 then
+            self.Ended:Fire()
+        end
+    end)()
+
+    return self
+end
 
 local function CountTable(Table)
     local Count = 0
@@ -102,22 +177,10 @@ local function IsService(Object)
 end
 
 local function Tostring(Object, One)
-    local Metatable = getrawmetatable(Object)
+    local Metatable = getmetatable(Object)
 
-    if Metatable and rawget(Metatable, "__tostring") then
-        local Old, IsReadOnly, Response = rawget(Metatable, "__tostring"), isreadonly(Metatable);
-
-        setreadonly(Metatable, false)
-        rawset(Metatable, "__tostring", nil)
-        Response = tostring(Object)
-        rawset(Metatable, "__tostring", Old)
-        setreadonly(Metatable, IsReadOnly)
-
-        if One then
-            return Response
-        end
-
-        return Response, " [Metatable]"
+    if Metatable ~= nil and type(Metatable) == "table" and rawget(Metatable, "__tostring") then
+        return tostring(Object), " [Metatable]"
     end
 
 
@@ -285,25 +348,6 @@ local function IncrementalRepeat(ToRepeat, Repeat, Increment)
     return Final
 end
 
-local function YieldableFunc(OriginalFunction) --// Used to work, don't know if it still does
-    if syn and syn.oth then
-        return OriginalFunction
-    end
-
-    local NoUV = #getupvalues(OriginalFunction) + 1
-    local Variables, Values = IncrementalRepeat("_", NoUV, true), IncrementalRepeat("game", NoUV)
-    local New = newcclosure(loadstring(([[
-        local %s = %s
-
-        return function()
-            return %s
-        end]]):format(Variables, Values, Variables)))()
-
-    hookfunction(New, OriginalFunction)
-
-    return New
-end
-
 local function CreateComment(Comment, Options, Existing)
     if Options.NoComments or Options.NoIndentation then
         return ""
@@ -312,37 +356,28 @@ local function CreateComment(Comment, Options, Existing)
     return (Existing and " // %s" or (Options.NoIndentation and " --[[ %s ]]" or " --// %s")):format(Comment)
 end
 
-local _FormatTable; _FormatTable = YieldableFunc(function(Table, Options, Indents, Checked, Root)
+local _FormatTable; _FormatTable = function(Table, Options, Indents, Checked, Root)
     local Success, Response = xpcall(function()
         if typeof(Table) ~= "table" and typeof(Table) ~= "userdata" then
             return;
-        end
-
-        if Checked and Checked[Table] then
-            return ParseObject(Table, false, false, Checked, Root or "Table", Options, Indents)
         end
         
         Root = typeof(Root) == "string" and Root or "Table"
         Checked = type(Checked) == "table" and Checked or {}
         Indents = Options.NoIndentation and 1 or Indents or 1
-
-        local Metatable, IsProxy = getrawmetatable(Table), typeof(Table) == "userdata"
-        local TableCount, TabWidth, Count = IsProxy and 0 or CountTable(Table), Options.NoIndentation and " " or "    ", 1
-
         Checked[Table] = TableCount
 
+        if Checked and Checked[Table] then
+            return ParseObject(Table, false, false, Checked, Root or "Table", Options, Indents)
+        end
+
+        local Metatable, IsProxy = getmetatable(Table), typeof(Table) == "userdata"
+        local TableCount, TabWidth, Count = IsProxy and 0 or CountTable(Table), Options.NoIndentation and " " or "    ", 1
+
         if TableCount >= 3e3 and not Options.LargeTables then
-            return ("{ \"Table is too large\" }; --// Max: 5e3, Got: %d"):format(TableCount)
+            return ("{ [Table is too large] }; --// Max: 5e3, Got: %d"):format(TableCount)
         elseif IsProxy then
-            local Key, Comment = Options.MetatableKey, "";
-
-            if Key and Metatable and rawget(Metatable, Key) ~= nil then
-                Table = rawget(Metatable, Key)
-                Metatable = nil
-                Comment = CreateComment("Defined by caller", Options)
-            end
-
-            return (Metatable and "setmetatable(%s, %s)%s" or "%s%s%s"):format(Tostring(Table), Metatable and (_FormatTable(Metatable, Options, Indents, Checked, Root) or "PrintTable Error: An unexpected error occured") or Comment, Comment), Comment and "DBC" or false, Table
+            return ("{\n [Proxy]%s \n}"):format(Metatable ~= nil and " --// [Metatable]" or "")
         end
 
         local NewTable, Results, Thread = {}, {}, Threading.new()
@@ -393,13 +428,12 @@ local _FormatTable; _FormatTable = YieldableFunc(function(Table, Options, Indent
                         end
 
                         if AlreadyLogged then
-                            Results[TIndex] = Format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot, Options, Indents), Tostring(Value), Count < TableCount and "," or "", CreateComment("[[ DUPLICATE ]]", Options))
+                            Results[TIndex] = Format(string.rep(TabWidth, Indents), ParseObject(Index, false, false, Checked, NewRoot, Options, Indents), Tostring(Value), Count < TableCount and "," or "", Checked[Value] and "" or CreateComment("Duplicate of "..Tostring(AlreadyLogged), Options))
                             Count += 1
                             return;
                         end
 
                         local IsValid = (type(Value) == "table" or typeof(Value) == "userdata") and not Checked[Value]
-
                         local ParsedValue, IsComment, ReParse = IsValid and _FormatTable(Value, Options, Indents + 1, Checked, NewRoot);
                         local Parsed = {ParseObject((IsComment == "DBC" or not ReParse) and Value or ReParse, true, true, Checked, NewRoot, Options, Indents)}
                         local Comment = ((IsComment == "DBC" or IsValid) and Parsed[1]..(Parsed[2] and " " or "") or "") .. (Parsed[2] and Parsed[2] or "")
@@ -433,16 +467,16 @@ local _FormatTable; _FormatTable = YieldableFunc(function(Table, Options, Indent
             end
         end
 
-        return (Metatable and "setmetatable(%s, %s) --// %s" or "%s"):format(TableCount == 0 and "{}" or ("{%s%s%s%s}"):format(Options.OneLine and "" or "\n", table.concat(Results, Options.OneLine and "" or "\n"), Options.OneLine and " " or "\n", string.rep(TabWidth, Indents - 1)), Metatable and _FormatTable(Metatable, Options, Indents, Checked, Root), Tostring(Table) .. " // " .. Tostring(Metatable))
+        return (Metatable and "setmetatable(%s, %s)" or "%s"):format(TableCount == 0 and "{}" or ("{%s%s%s%s}"):format(Options.OneLine and "" or "\n", table.concat(Results, Options.OneLine and "" or "\n"), Options.OneLine and " " or "\n", string.rep(TabWidth, Indents - 1)), Metatable ~= nil and (type(Metatable) == "table" and _FormatTable(Metatable, Options, Indents, Checked, Root) or "{ [Unknown Metatable] }"))
     end, function(e)
         return ("FormatTable Error: [[\n%s\n%s]]"):format(e, debug.traceback())
     end)
 
     return Response
-end)
+end
 
 
-getgenv().FormatTable = YieldableFunc(function(Table, Options)
+FormatTable = function(Table, Options)
     local Type = typeof(Table)
     assert((Type == "table" or Type == "userdata"), "FormatTable Error: Invalid Argument #1 (table or userdata expected)")
     assert((type(Options) == "table" or not Options), "FormatTable Error: Invalid Argument #2 (table expected)")
@@ -454,14 +488,22 @@ getgenv().FormatTable = YieldableFunc(function(Table, Options)
     end, Table, Options, Options.Indents)
 
     return Response
-end)
+end
 
-getgenv().FormatArguments = YieldableFunc(function(...)
+FormatArguments = function(...)
     local Success, Response = xpcall(_FormatTable, function(e)
         return ("FormatTable Error: [[\n%s\n%s]]"):format(e, debug.traceback())
     end, {...}, {})
 
     return Response
-end)
+end
 
-return FormatTable
+_G.FormatTable = FormatTable
+shared.FormatTable = FormatTable
+_G.FormatArguments = FormatArguments
+shared.FormatArguments = FormatArguments
+
+return {
+    FormatTable = FormatTable,
+    FormatArguments = FormatArguments
+}
