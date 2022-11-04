@@ -1,15 +1,6 @@
 --[[
     Report any bugs, issues and detections to me if you don't mind (NoTwistedHere#6703)
-
-    [=[BETA]=]
-
-    Detections:
-        https://www.roblox.com/games/9334350521/Hades-Anti-Cheat (not directly a remotespy detection, but script execution)
-    Safe:
-        https://www.roblox.com/games/6993368317/SilentEye-Testing
 ]]
-
-Branch = "beta"
 
 if Branch or not FormatTable then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/NoTwistedHere/Roblox/" .. (Branch or "main") .. "/FormatTable.lua"))()
