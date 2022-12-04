@@ -67,10 +67,10 @@ if isfile(Directory..FileName..FileType) then
     until not isfile(Directory..Name..FileType)
     
     FileName = Name
-    
-    if WriteToFile then
-        writefile(Directory..FileName..FileType, "")
-    end
+end
+
+if WriteToFile then
+    writefile(Directory..FileName..FileType, "")
 end
 
 local function ConvertCodepoints(OriginalString) --// cba to rename it
